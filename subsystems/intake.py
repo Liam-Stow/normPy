@@ -7,29 +7,34 @@ import constants
 
 
 class Intake(commands2.Subsystem):
+    # Actuators
+    deploySolenoid = wpilib.DoubleSolenoid(
+        constants.can.pnuematicsHub,
+        wpilib.PneumaticsModuleType.REVPH,
+        constants.pnuematics.intakeDeploy,
+        constants.pnuematics.intakeRetract,
+    )
+    motor = rev.CANSparkMax(
+        constants.can.intakeMotor, rev.CANSparkLowLevel.MotorType.kBrushless
+    )
+
     def __init__(self) -> None:
         super().__init__()
 
-        self.deploySolenoid = wpilib.DoubleSolenoid(
-            constants.pnuematicsHub,
-            wpilib.PneumaticsModuleType.REVPH,
-            constants.intakeDeploy,
-            constants.intakeRetract,
-        )
-
-        self.motor = rev.CANSparkMax(constants.intakeMotor, rev.CANSparkLowLevel.MotorType.kBrushless)
-
     def cmdDeploy(self) -> commands2.Command:
-        """Grabs the hatch"""
+        """Deployes the intake"""
         return cmd.runOnce(
             lambda: self.deploySolenoid.set(wpilib.DoubleSolenoid.Value.kForward), self
         )
 
     def cmdRetract(self) -> commands2.Command:
-        """Releases the hatch"""
+        """Retracts the intake"""
         return cmd.runOnce(
             lambda: self.deploySolenoid.set(wpilib.DoubleSolenoid.Value.kReverse), self
         )
+
+    def cmdRun(self) -> commands2.Command:
+        return cmd.startEnd(lambda: self.motor.set(1), lambda: self.motor.set(0))
 
     def periodic(self) -> None:
         if self.deploySolenoid.get() == wpilib.DoubleSolenoid.Value.kForward:

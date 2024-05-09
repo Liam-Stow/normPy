@@ -25,19 +25,24 @@
       "Pos": "250,491",
       "Size": "796,155"
     },
+    "###Keyboard 0 Settings": {
+      "Collapsed": "0",
+      "Pos": "143,88",
+      "Size": "300,560"
+    },
     "###NetworkTables": {
       "Collapsed": "0",
-      "Pos": "310,181",
-      "Size": "782,333"
+      "Pos": "152,25",
+      "Size": "795,405"
     },
     "###NetworkTables Info": {
       "Collapsed": "0",
-      "Pos": "250,130",
+      "Pos": "170,52",
       "Size": "750,145"
     },
     "###Other Devices": {
       "Collapsed": "0",
-      "Pos": "1025,20",
+      "Pos": "1012,17",
       "Size": "250,695"
     },
     "###System Joysticks": {
