@@ -14,8 +14,8 @@ class Intake(commands2.Subsystem):
         constants.pnuematics.intakeDeploy,
         constants.pnuematics.intakeRetract,
     )
-    motor = rev.CANSparkMax(
-        constants.can.intakeMotor, rev.CANSparkLowLevel.MotorType.kBrushless
+    motor = rev.SparkMax(
+        constants.can.intakeMotor, rev.SparkLowLevel.MotorType.kBrushless
     )
 
     def __init__(self) -> None:
