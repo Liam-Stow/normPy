@@ -29,6 +29,9 @@
         },
         "open": true,
         "shooter": {
+          "angle solendoid": {
+            "open": true
+          },
           "open": true
         }
       }

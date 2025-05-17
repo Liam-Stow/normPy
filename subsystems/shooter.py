@@ -63,9 +63,6 @@ class Shooter(commands2.Subsystem):
         else:
             wpilib.SmartDashboard.putString("shooter/angle", "high")
 
-        wpilib.SmartDashboard.putNumber("shooter/left power", self.leftMotor.get())
-        wpilib.SmartDashboard.putNumber("shooter/right power", self.rightMotor.get())
-
     def simulationPeriodic(self):
         self.physicsSim.setInputVoltage(self.leftMotorSim.getAppliedOutput() * 12.0)
         self.physicsSim.update(0.02)
