@@ -2,6 +2,8 @@ import wpilib
 import rev
 import commands2
 import commands2.cmd as cmd
+import wpilib.simulation
+import wpimath.system.plant as plant
 
 import constants
 
@@ -18,17 +20,24 @@ class Intake(commands2.Subsystem):
         constants.can.intakeMotor, rev.SparkLowLevel.MotorType.kBrushless
     )
 
+    # Constants
+    gearing = 1.0
+    MOI_KGM2 = 0.00001  # Moment of Inertia in kg*m^2
+
+    # Simulation
+    motorSim: rev.SparkMaxSim = rev.SparkMaxSim(motor, plant.DCMotor.NEO())
+    linearSystem = plant.LinearSystemId.DCMotorSystem(plant.DCMotor.NEO(), MOI_KGM2, gearing)
+    physicsSim = wpilib.simulation.DCMotorSim(linearSystem, plant.DCMotor.NEO())
+
     def __init__(self) -> None:
         super().__init__()
 
     def cmdDeploy(self) -> commands2.Command:
-        """Deployes the intake"""
         return cmd.runOnce(
             lambda: self.deploySolenoid.set(wpilib.DoubleSolenoid.Value.kForward), self
         )
 
     def cmdRetract(self) -> commands2.Command:
-        """Retracts the intake"""
         return cmd.runOnce(
             lambda: self.deploySolenoid.set(wpilib.DoubleSolenoid.Value.kReverse), self
         )
@@ -41,3 +50,9 @@ class Intake(commands2.Subsystem):
             wpilib.SmartDashboard.putString("intake/deployment", "deployed")
         else:
             wpilib.SmartDashboard.putString("intake/deployment", "retracted")
+
+    def simulationPeriodic(self) -> None:
+        self.physicsSim.setInputVoltage(self.motor.getAppliedOutput() * 12.0)
+        self.physicsSim.update(0.02)
+        rpm = self.physicsSim.getAngularVelocityRPM()
+        self.motorSim.iterate(rpm, 12, 0.02)

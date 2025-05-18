@@ -17,7 +17,7 @@ class RobotContainer:
         self.configureButtonBindings()
 
     def configureButtonBindings(self):
-        self.driverController.a().onTrue(self.intake.cmdDeploy())
+        self.driverController.a().whileTrue(self.intake.cmdDeploy().andThen(self.intake.cmdRun()))
         self.driverController.b().onTrue(self.intake.cmdRetract())
         self.driverController.x().onTrue(self.shooter.cmdSpinUp(2000))
         self.driverController.y().onTrue(self.shooter.cmdSpinUp(0))

@@ -1,10 +1,9 @@
 import wpilib
 import rev
 import commands2
-import commands2.cmd as cmd
 import wpilib.simulation
 import wpimath.system.plant as plant
-from math import pi
+import wpimath.units as units
 from wpimath.units import radiansPerSecondToRotationsPerMinute
 
 import constants
@@ -70,14 +69,14 @@ class Shooter(commands2.Subsystem):
         rpm = radiansPerSecondToRotationsPerMinute(radsPerSec)
         self.leftMotorSim.iterate(rpm, 12, 0.02)
 
-    def setSpeed(self, targetRPM: float) -> None:
+    def setSpeed(self, targetRPM: units.revolutions_per_minute) -> None:
         """Sets the speed of the shooter motors"""
         err = None
         while err != rev.REVLibError.kOk:
             err = self.leftPID.setReference(targetRPM, rev.SparkLowLevel.ControlType.kVelocity)
         self.targetRPM = targetRPM
 
-    def cmdSpinUp(self, targetRPM) -> commands2.Command:
+    def cmdSpinUp(self, targetRPM: units.revolutions_per_minute) -> commands2.Command:
         return super().runOnce(lambda: self.setSpeed(targetRPM))
 
     def cmdAimLow(self) -> commands2.Command:
