@@ -20,7 +20,7 @@ class SwerveModule:
     wheel_circumference_m = 2 * pi * wheel_radius_m
 
     # Simulation
-    drive_moi = 0.001  # Moment of Inertia in kg*m^2
+    drive_moi = 0.01  # Moment of Inertia in kg*m^2
     steer_moi = 0.00001  # Moment of Inertia in kg*m^2
     drive_system = plant.LinearSystemId().DCMotorSystem(plant.DCMotor.krakenX60FOC(), drive_moi, drive_gearing)
     steer_system = plant.LinearSystemId().DCMotorSystem(plant.DCMotor.falcon500FOC(), steer_moi, steer_gearing)
