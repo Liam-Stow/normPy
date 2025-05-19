@@ -1,3 +1,4 @@
 __pycache__/
 *$py.class
 .venv/
+ctre_sim/

@@ -1,33 +1,30 @@
-import types
+from enum import IntEnum, unique
 
 # Pnuematics
-pnuematics = types.SimpleNamespace()
-pnuematics.intakeDeploy = 0
-pnuematics.intakeRetract = 1
-pnuematics.shooterUp = 2
-pnuematics.shooterDown = 3
+@unique
+class pnuematics(IntEnum):
+    intakeDeploy = 0
+    intakeRetract = 1
+    shooterUp = 2
+    shooterDown = 3
 
 # CAN Bus
-can = types.SimpleNamespace()
-can.drivebaseFrontLeftDrive = 1
-can.drivebaseFrontLeftSteer = 2
-can.drivebaseFrontRightDrive = 3
-can.drivebaseFrontRightSteer = 4
-can.drivebaseBackLeftDrive = 5
-can.drivebaseBackLeftSteer = 6
-can.drivebaseBackRightDrive = 7
-can.drivebaseBackRightSteer = 8
-can.drivebaseFrontLeftEncoder = 9
-can.drivebaseFrontRightEncoder = 10
-can.drivebaseBackLeftEncoder = 11
-can.drivebaseBackRightEncoder = 12
-can.pnuematicsHub = 2
-can.intakeMotor = 3
-can.shooterLeftMotor = 4
-can.shooterRightMotor = 5
-
-# DIO
-dio = types.SimpleNamespace()
-
-# PWM
-pwm = types.SimpleNamespace()
+@unique
+class can(IntEnum):
+    drivebaseFrontLeftDrive = 1
+    drivebaseFrontLeftSteer = 2
+    drivebaseFrontRightDrive = 3
+    drivebaseFrontRightSteer = 4
+    drivebaseBackLeftDrive = 5
+    drivebaseBackLeftSteer = 6
+    drivebaseBackRightDrive = 7
+    drivebaseBackRightSteer = 8
+    drivebaseFrontLeftEncoder = 9
+    drivebaseFrontRightEncoder = 10
+    drivebaseBackLeftEncoder = 11
+    drivebaseBackRightEncoder = 12
+    drivebaseGyro = 13
+    pnuematicsHub = 14
+    intakeMotor = 15
+    shooterLeftMotor = 16
+    shooterRightMotor = 17

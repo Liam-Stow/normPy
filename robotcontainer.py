@@ -1,6 +1,8 @@
 import commands2
 from subsystems.intake import Intake
 from subsystems.shooter import Shooter
+from subsystems.drivebase import Drivebase
+from wpimath.kinematics import ChassisSpeeds
 
 class RobotContainer:
     """
@@ -9,11 +11,13 @@ class RobotContainer:
     periodic methods (other than the scheduler calls). Instead, the structure of the robot (including
     subsystems, commands, and button mappings) should be declared here.
     """
+    intake = Intake()
+    shooter = Shooter()
+    drivebase = Drivebase()
+    driverController = commands2.button.CommandXboxController(0)
 
     def __init__(self) -> None:
-        self.intake = Intake()
-        self.shooter = Shooter()
-        self.driverController = commands2.button.CommandXboxController(0)
+        self.drivebase.setDefaultCommand(self.drivebase.drive(lambda: ChassisSpeeds(0.5), True))
         self.configureButtonBindings()
 
     def configureButtonBindings(self):

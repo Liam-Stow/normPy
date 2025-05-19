@@ -5,19 +5,19 @@ import commands2.cmd as cmd
 import wpilib.simulation
 import wpimath.system.plant as plant
 
-import constants
+from constants import can, pnuematics
 
 
 class Intake(commands2.Subsystem):
     # Actuators
     deploySolenoid = wpilib.DoubleSolenoid(
-        constants.can.pnuematicsHub,
+        can.pnuematicsHub,
         wpilib.PneumaticsModuleType.REVPH,
-        constants.pnuematics.intakeDeploy,
-        constants.pnuematics.intakeRetract,
+        pnuematics.intakeDeploy,
+        pnuematics.intakeRetract,
     )
     motor = rev.SparkMax(
-        constants.can.intakeMotor, rev.SparkLowLevel.MotorType.kBrushless
+        can.intakeMotor, rev.SparkLowLevel.MotorType.kBrushless
     )
 
     # Constants
