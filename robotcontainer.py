@@ -17,7 +17,7 @@ class RobotContainer:
     driverController = commands2.button.CommandXboxController(0)
 
     def __init__(self) -> None:
-        self.drivebase.setDefaultCommand(self.drivebase.drive(lambda: ChassisSpeeds(0.5), True))
+        self.drivebase.setDefaultCommand(self.drivebase.drive(lambda: ChassisSpeeds(-0.5), True))
         self.configureButtonBindings()
 
     def configureButtonBindings(self):

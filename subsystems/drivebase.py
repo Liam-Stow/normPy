@@ -1,14 +1,15 @@
-from util.swerve_module import SwerveModule
-from constants import can
-from commands2.button import CommandXboxController
-from wpimath.kinematics import ChassisSpeeds
 from typing import Callable
+
 from commands2 import Command, Subsystem
-from wpimath.geometry import Rotation2d
-from wpimath.kinematics import SwerveDrive4Kinematics
-from wpimath.geometry import Translation2d
+from commands2.button import CommandXboxController
 from phoenix6.hardware.pigeon2 import Pigeon2
-from wpilib import SmartDashboard
+from wpilib import DriverStation, Field2d, SmartDashboard
+from wpimath.estimator import SwerveDrive4PoseEstimator
+from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+from wpimath.kinematics import ChassisSpeeds, SwerveDrive4Kinematics
+
+from constants import can
+from util.swerve_module import SwerveModule
 
 
 class Drivebase(Subsystem):
@@ -32,9 +33,19 @@ class Drivebase(Subsystem):
     )
 
     max_speed_mps = 5.0  # m/s
+    field_display = Field2d()
 
     def __init__(self):
-        pass
+        module_positions = (
+            self.front_left_module.get_position_from_cancoder(),
+            self.front_right_module.get_position_from_cancoder(),
+            self.back_left_module.get_position_from_cancoder(),
+            self.back_right_module.get_position_from_cancoder()
+        )
+        self.pose_estimator = SwerveDrive4PoseEstimator(
+            self.kinematics, Rotation2d(0), module_positions, Pose2d()
+        )
+        SmartDashboard.putData("drivebase/Field", self.field_display)
 
     def periodic(self) -> None:
         chassis_speeds = self.kinematics.toChassisSpeeds(
@@ -45,16 +56,36 @@ class Drivebase(Subsystem):
                 self.back_right_module.get_state_from_internal_encoders(),
             )
         )
-
         SmartDashboard.putNumber("drivebase/Chassis Speed VX", chassis_speeds.vx)
         SmartDashboard.putNumber("drivebase/Chassis Speed VY", chassis_speeds.vy)
         SmartDashboard.putNumber("drivebase/Chassis Speed Omega", chassis_speeds.omega)
+        
+        self.update_odometry()
+
 
     def simulationPeriodic(self) -> None:
         self.front_left_module.update_sim()
         self.front_right_module.update_sim()
         self.back_left_module.update_sim()
         self.back_right_module.update_sim()
+
+    def update_odometry(self) -> None:
+        module_positions = (
+            self.front_left_module.get_position_from_cancoder(),
+            self.front_right_module.get_position_from_cancoder(),
+            self.back_left_module.get_position_from_cancoder(),
+            self.back_right_module.get_position_from_cancoder(),
+        )
+
+        alliance = DriverStation.getAlliance()
+        if alliance == DriverStation.Alliance.kBlue:
+            self.pose_estimator.update(self.get_gyro_rotation(), module_positions)
+        else:
+            self.pose_estimator.update(
+                self.get_gyro_rotation() - Rotation2d.fromDegrees(180), module_positions
+            )
+
+        self.field_display.setRobotPose(self.pose_estimator.getEstimatedPosition())
 
     def calc_joystick_speeds(self, controller: CommandXboxController):
         pass

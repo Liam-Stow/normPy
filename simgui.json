@@ -5,12 +5,31 @@
         "header": {
           "open": true
         }
+      },
+      "Talon FX (v6)[1]": {
+        "header": {
+          "open": true
+        }
       }
     }
   },
   "NTProvider": {
     "types": {
-      "/FMSInfo": "FMSInfo"
+      "/FMSInfo": "FMSInfo",
+      "/SmartDashboard/drivebase/Field": "Field2d"
+    },
+    "windows": {
+      "/SmartDashboard/drivebase/Field": {
+        "bottom": 1638,
+        "height": 8.051901817321777,
+        "left": 534,
+        "right": 3466,
+        "top": 291,
+        "width": 17.54825210571289,
+        "window": {
+          "visible": true
+        }
+      }
     }
   },
   "NetworkTables": {

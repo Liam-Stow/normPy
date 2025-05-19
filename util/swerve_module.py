@@ -9,6 +9,7 @@ import wpilib
 import wpilib.simulation
 from wpimath import units
 from wpimath.kinematics import SwerveModuleState
+from wpimath.kinematics import SwerveModulePosition
 from wpimath.geometry import Rotation2d
 from wpimath.system import plant
 
@@ -38,7 +39,7 @@ class SwerveModule:
         drive_config.feedback.feedback_sensor_source = signals.FeedbackSensorSourceValue.ROTOR_SENSOR
         drive_config.closed_loop_general.continuous_wrap = False
         drive_config.feedback.sensor_to_mechanism_ratio = self.drive_gearing
-        drive_config.slot0.k_p = 0.017401 
+        drive_config.slot0.k_p = 0.01 
         drive_config.slot0.k_i = 0.0
         drive_config.slot0.k_d = 0.0
         drive_config.current_limits.supply_current_limit_enable = True
@@ -47,9 +48,9 @@ class SwerveModule:
         drive_config.current_limits.supply_current_limit = 60.0  # Amps
         drive_config.current_limits.supply_current_lower_time = 0.1  # Seconds
         drive_config.current_limits.stator_current_limit = 80.0  # Amps
-        drive_config.slot0.k_s = 0.096844
-        drive_config.slot0.k_v = 0.78528125 
-        drive_config.slot0.k_a = 0.079385
+        drive_config.slot0.k_s = 0.0
+        drive_config.slot0.k_v = 0.0 
+        drive_config.slot0.k_a = 0.0
         drive_config.motor_output.neutral_mode = signals.NeutralModeValue.BRAKE
         self.drive_motor.configurator.apply(drive_config)
 
@@ -111,6 +112,14 @@ class SwerveModule:
         return SwerveModuleState(
             self.get_linear_velocity(), self.get_rotation_from_internal_encoder()
         )
+
+    def get_state_from_cancoder(self) -> SwerveModuleState:
+        return SwerveModuleState(
+            self.get_linear_velocity(), self.get_rotation_from_cancoder()
+        )
+    
+    def get_position_from_cancoder(self) -> SwerveModulePosition:
+        return SwerveModulePosition(self.get_driven_distance(), self.get_rotation_from_cancoder())
     
     def get_angle_from_internal_encoder(self) -> units.turns:
         return self.steer_motor.get_position().value
@@ -123,6 +132,9 @@ class SwerveModule:
         velocity_signal = self.steer_encoder.get_velocity()
         compensated_angle = BaseStatusSignal.get_latency_compensated_value(angle_signal, velocity_signal)
         return compensated_angle
+    
+    def get_rotation_from_cancoder(self) -> Rotation2d:
+        return Rotation2d(self.get_angle_from_cancoder())
 
     # def get_wheel_velocity(self) -> units.turns_per_second:
     #     pass
@@ -133,8 +145,11 @@ class SwerveModule:
     # def get_drive_voltage(self) -> units.volts:
     #     pass
 
-    # def get_driven_rotations(self) -> units.turns:
-    #     pass
+    def get_driven_rotations(self) -> units.turns:
+        return self.drive_motor.get_position().value
+
+    def get_driven_distance(self) -> units.meters:
+        return self.get_driven_rotations() * self.wheel_circumference_m
 
     def update_sim(self):
         drive_sim_state = self.drive_motor.sim_state
