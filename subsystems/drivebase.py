@@ -15,10 +15,30 @@ from util.swerve_module import SwerveModule
 class Drivebase(Subsystem):
     gyro = Pigeon2(can.drivebaseGyro)
 
-    front_left_module = SwerveModule(can.drivebaseFrontLeftDrive, can.drivebaseFrontLeftSteer, can.drivebaseFrontLeftEncoder)
-    front_right_module = SwerveModule(can.drivebaseFrontRightDrive, can.drivebaseFrontRightSteer, can.drivebaseFrontRightEncoder)
-    back_left_module = SwerveModule(can.drivebaseBackLeftDrive, can.drivebaseBackLeftSteer, can.drivebaseBackLeftEncoder)
-    back_right_module = SwerveModule(can.drivebaseBackRightDrive, can.drivebaseBackRightSteer, can.drivebaseBackRightEncoder)
+    front_left_module = SwerveModule(
+        can.drivebaseFrontLeftDrive,
+        can.drivebaseFrontLeftSteer,
+        can.drivebaseFrontLeftEncoder,
+        "FL",
+    )
+    front_right_module = SwerveModule(
+        can.drivebaseFrontRightDrive,
+        can.drivebaseFrontRightSteer,
+        can.drivebaseFrontRightEncoder,
+        "FR",
+    )
+    back_left_module = SwerveModule(
+        can.drivebaseBackLeftDrive,
+        can.drivebaseBackLeftSteer,
+        can.drivebaseBackLeftEncoder,
+        "BL",
+    )
+    back_right_module = SwerveModule(
+        can.drivebaseBackRightDrive,
+        can.drivebaseBackRightSteer,
+        can.drivebaseBackRightEncoder,
+        "BR",
+    )
 
     front_left_location = Translation2d(0.381, 0.381)
     front_right_location = Translation2d(0.381, -0.381)
@@ -40,7 +60,7 @@ class Drivebase(Subsystem):
             self.front_left_module.get_position_from_cancoder(),
             self.front_right_module.get_position_from_cancoder(),
             self.back_left_module.get_position_from_cancoder(),
-            self.back_right_module.get_position_from_cancoder()
+            self.back_right_module.get_position_from_cancoder(),
         )
         self.pose_estimator = SwerveDrive4PoseEstimator(
             self.kinematics, Rotation2d(0), module_positions, Pose2d()
@@ -48,20 +68,11 @@ class Drivebase(Subsystem):
         SmartDashboard.putData("drivebase/Field", self.field_display)
 
     def periodic(self) -> None:
-        chassis_speeds = self.kinematics.toChassisSpeeds(
-            (
-                self.front_left_module.get_state_from_internal_encoders(),
-                self.front_right_module.get_state_from_internal_encoders(),
-                self.back_left_module.get_state_from_internal_encoders(),
-                self.back_right_module.get_state_from_internal_encoders(),
-            )
-        )
-        SmartDashboard.putNumber("drivebase/Chassis Speed VX", chassis_speeds.vx)
-        SmartDashboard.putNumber("drivebase/Chassis Speed VY", chassis_speeds.vy)
-        SmartDashboard.putNumber("drivebase/Chassis Speed Omega", chassis_speeds.omega)
-        
+        self.front_left_module.send_to_dashboard()
+        self.front_right_module.send_to_dashboard()
+        self.back_left_module.send_to_dashboard()
+        self.back_right_module.send_to_dashboard()
         self.update_odometry()
-
 
     def simulationPeriodic(self) -> None:
         self.front_left_module.update_sim()

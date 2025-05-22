@@ -1,45 +1,53 @@
 from math import pi
-from phoenix6.hardware.talon_fx import TalonFX
-from phoenix6.hardware.cancoder import CANcoder
-from phoenix6.configs import TalonFXConfiguration, CANcoderConfiguration
-from phoenix6.base_status_signal import BaseStatusSignal
+
 import phoenix6.controls as controls
 import phoenix6.signals as signals
 import wpilib
 import wpilib.simulation
+from phoenix6.base_status_signal import BaseStatusSignal
+from phoenix6.configs import CANcoderConfiguration, TalonFXConfiguration
+from phoenix6.hardware.cancoder import CANcoder
+from phoenix6.hardware.talon_fx import TalonFX
 from wpimath import units
-from wpimath.kinematics import SwerveModuleState
-from wpimath.kinematics import SwerveModulePosition
 from wpimath.geometry import Rotation2d
+from wpimath.kinematics import SwerveModulePosition, SwerveModuleState
 from wpimath.system import plant
+
 
 class SwerveModule:
     # Constants
     drive_gearing = 6.75
     steer_gearing = 150.0 / 7.0
-    wheel_radius_m = 0.0481098886  # meters
+    wheel_radius_m = 0.0481098886
     wheel_circumference_m = 2 * pi * wheel_radius_m
 
-    # Simulation
-    drive_moi = 0.01  # Moment of Inertia in kg*m^2
-    steer_moi = 0.00001  # Moment of Inertia in kg*m^2
-    drive_system = plant.LinearSystemId().DCMotorSystem(plant.DCMotor.krakenX60FOC(), drive_moi, drive_gearing)
-    steer_system = plant.LinearSystemId().DCMotorSystem(plant.DCMotor.falcon500FOC(), steer_moi, steer_gearing)
-    drive_physics_sim = wpilib.simulation.DCMotorSim(drive_system, plant.DCMotor.krakenX60FOC().withReduction(drive_gearing))
-    steer_physics_sim = wpilib.simulation.DCMotorSim(steer_system, plant.DCMotor.falcon500FOC().withReduction(steer_gearing))
-
-    def __init__(self, drive_id: int, steer_id: int, steer_encoder_id: int):
+    def __init__(self, drive_id: int, steer_id: int, steer_encoder_id: int, label: str):
+        # Simulation
+        self.drive_moi = 0.01  # Moment of Inertia in kg*m^2
+        self.steer_moi = 0.00001  # Moment of Inertia in kg*m^2
+        self.drive_motor_model = plant.DCMotor.krakenX60FOC(1)
+        self.drive_system = plant.LinearSystemId().DCMotorSystem(self.drive_motor_model, self.drive_moi, self.drive_gearing)
+        self.steer_system = plant.LinearSystemId().DCMotorSystem(plant.DCMotor.falcon500FOC(), self.steer_moi, self.steer_gearing)
+        self.drive_physics_sim = wpilib.simulation.DCMotorSim(self.drive_system, self.drive_motor_model)
+        self.steer_physics_sim = wpilib.simulation.DCMotorSim(self.steer_system, plant.DCMotor.falcon500FOC().withReduction(self.steer_gearing))
+        
         # Make devices
         self.drive_motor = TalonFX(drive_id)
         self.steer_motor = TalonFX(steer_id)
         self.steer_encoder = CANcoder(steer_encoder_id)
+        self.label = label
+
+        # Make simulation states
+        self.drive_sim_state = self.drive_motor.sim_state
+        self.steer_sim_state = self.steer_motor.sim_state
+        self.steer_encoder_sim_state = self.steer_encoder.sim_state
 
         # Configure devices
         drive_config = TalonFXConfiguration()
         drive_config.feedback.feedback_sensor_source = signals.FeedbackSensorSourceValue.ROTOR_SENSOR
         drive_config.closed_loop_general.continuous_wrap = False
         drive_config.feedback.sensor_to_mechanism_ratio = self.drive_gearing
-        drive_config.slot0.k_p = 0.01 
+        drive_config.slot0.k_p = 40.0
         drive_config.slot0.k_i = 0.0
         drive_config.slot0.k_d = 0.0
         drive_config.current_limits.supply_current_limit_enable = True
@@ -48,10 +56,10 @@ class SwerveModule:
         drive_config.current_limits.supply_current_limit = 60.0  # Amps
         drive_config.current_limits.supply_current_lower_time = 0.1  # Seconds
         drive_config.current_limits.stator_current_limit = 80.0  # Amps
-        drive_config.slot0.k_s = 0.0
-        drive_config.slot0.k_v = 0.0 
+        drive_config.slot0.k_s = 5.0
+        drive_config.slot0.k_v = 0.0
         drive_config.slot0.k_a = 0.0
-        drive_config.motor_output.neutral_mode = signals.NeutralModeValue.BRAKE
+        # drive_config.motor_output.neutral_mode = signals.NeutralModeValue.BRAKE
         self.drive_motor.configurator.apply(drive_config)
 
         steer_config = TalonFXConfiguration()
@@ -80,14 +88,22 @@ class SwerveModule:
         target_state.cosineScale(current_angle)
 
         self.set_target_rotation(target_state.angle)
-        self.set_target_speed(target_state.speed)
+        self.set_target_linear_velocity(target_state.speed)
 
 
     def sync_sensors(self):
         self.steer_motor.set_position(self.get_angle_from_cancoder())
 
     def send_to_dashboard(self):
-        pass
+        wpilib.SmartDashboard.putNumber(f"drivebase/swerve/{self.label}drive/position", self.get_driven_rotations())
+        wpilib.SmartDashboard.putNumber(f"drivebase/swerve/{self.label}drive/velocity", self.drive_motor.get_velocity().value)
+        wpilib.SmartDashboard.putNumber(f"drivebase/swerve/{self.label}drive/target", self.drive_motor.get_closed_loop_reference().value)
+        wpilib.SmartDashboard.putNumber(f"drivebase/swerve/{self.label}steer/cancoder", self.get_angle_from_cancoder())
+        wpilib.SmartDashboard.putNumber(f"drivebase/swerve/{self.label}steer/internal encoder", self.get_angle_from_internal_encoder())
+        wpilib.SmartDashboard.putNumber(f"drivebase/swerve/{self.label}steer/velocity", self.steer_motor.get_velocity().value)
+        wpilib.SmartDashboard.putNumber(f"drivebase/swerve/{self.label}steer/target", self.steer_motor.get_closed_loop_reference().value)
+
+        wpilib.SmartDashboard.putNumber(f"drivebase/swerve/{self.label}drive/sim current", self.drive_physics_sim.getCurrentDraw())
 
     def set_target_rotation(self, angle: Rotation2d):
         rotations = angle.degrees() / 360.0
@@ -96,8 +112,12 @@ class SwerveModule:
     def set_target_angle(self, angle: units.turns):
         self.steer_motor.set_control(controls.PositionTorqueCurrentFOC(angle))
 
-    def set_target_speed(self, speed: units.turns_per_second):
-        self.drive_motor.set_control(controls.VelocityTorqueCurrentFOC(speed))
+    def set_target_linear_velocity(self, velocity: units.meters_per_second):
+        rotations_per_second = velocity / self.wheel_circumference_m
+        self.set_target_wheel_velocity(rotations_per_second)
+
+    def set_target_wheel_velocity(self, velocity: units.turns_per_second):
+        self.drive_motor.set_control(controls.VelocityTorqueCurrentFOC(velocity))
 
     def drive_straight_volts(self, volts: units.volts):
         self.drive_motor.set_control(controls.VoltageOut(volts))
@@ -152,26 +172,22 @@ class SwerveModule:
         return self.get_driven_rotations() * self.wheel_circumference_m
 
     def update_sim(self):
-        drive_sim_state = self.drive_motor.sim_state
-        steer_sim_state = self.steer_motor.sim_state
-        steer_encoder_sim_state = self.steer_encoder.sim_state
-
         # Sim the drive motor
-        self.drive_physics_sim.setInputVoltage(drive_sim_state.motor_voltage * 12.0)
+        self.drive_sim_state.set_supply_voltage(wpilib.RobotController.getBatteryVoltage())
+        self.drive_physics_sim.setInputVoltage(self.drive_sim_state.motor_voltage)
         self.drive_physics_sim.update(0.02)
-        drive_sim_state.set_raw_rotor_position(self.drive_physics_sim.getAngularPositionRotations() * self.drive_gearing)
-        rpm = self.drive_physics_sim.getAngularVelocityRPM()
-        rps = rpm / 60
-        drive_sim_state.set_rotor_velocity(rps * self.drive_gearing)
+        self.drive_sim_state.set_raw_rotor_position(self.drive_physics_sim.getAngularPositionRotations() * self.drive_gearing)
+        rps = units.radiansToRotations(self.drive_physics_sim.getAngularVelocity())
+        self.drive_sim_state.set_rotor_velocity(rps * self.drive_gearing)
 
         # Sim the steer motor
-        self.steer_physics_sim.setInputVoltage(steer_sim_state.motor_voltage * 12.0)
+        self.steer_sim_state.set_supply_voltage(wpilib.RobotController.getBatteryVoltage())
+        self.steer_physics_sim.setInputVoltage(self.steer_sim_state.motor_voltage)
         self.steer_physics_sim.update(0.02)
-        steer_sim_state.set_raw_rotor_position(self.steer_physics_sim.getAngularPositionRotations() * self.steer_gearing)
-        rpm = self.steer_physics_sim.getAngularVelocityRPM()
-        rps = rpm / 60
-        steer_sim_state.set_rotor_velocity(rps * self.steer_gearing)
+        self.steer_sim_state.set_raw_rotor_position(self.steer_physics_sim.getAngularPositionRotations() * self.steer_gearing)
+        rps = units.radiansToRotations(self.steer_physics_sim.getAngularVelocity()) 
+        self.steer_sim_state.set_rotor_velocity(rps * self.steer_gearing)
 
         # Sim the steer encoder
-        steer_encoder_sim_state.set_velocity(rps)
-        steer_encoder_sim_state.set_raw_position(self.steer_physics_sim.getAngularPositionRotations())
+        self.steer_encoder_sim_state.set_velocity(rps)
+        self.steer_encoder_sim_state.set_raw_position(self.steer_physics_sim.getAngularPositionRotations())
