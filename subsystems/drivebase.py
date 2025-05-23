@@ -147,69 +147,64 @@ class Drivebase(Subsystem):
             configPath + "Rotation Scaling", self.ROTATION_SCALING
         )
 
-        # # Recreate slew rate limiters if limits have changed
-        # if max_joystick_accel != self.tuned_max_joystick_accel:
-        #     self.x_stick_limiter = SlewRateLimiter(max_joystick_accel)
-        #     self.y_stick_limiter = SlewRateLimiter(max_joystick_accel)
-        #     self.tuned_max_joystick_accel = max_joystick_accel
-        # if max_ang_joystick_accel != self.tuned_max_angular_joystick_accel:
-        #     self.rot_stick_limiter = SlewRateLimiter(max_ang_joystick_accel)
-        #     self.tuned_max_angular_joystick_accel = max_ang_joystick_accel
+        # Recreate slew rate limiters if limits have changed
+        if max_joystick_accel != self.tuned_max_joystick_accel:
+            self.x_stick_limiter = SlewRateLimiter(max_joystick_accel)
+            self.y_stick_limiter = SlewRateLimiter(max_joystick_accel)
+            self.tuned_max_joystick_accel = max_joystick_accel
+        if max_ang_joystick_accel != self.tuned_max_angular_joystick_accel:
+            self.rot_stick_limiter = SlewRateLimiter(max_ang_joystick_accel)
+            self.tuned_max_angular_joystick_accel = max_ang_joystick_accel
 
-        # # Apply deadbands
-        # raw_translation_y = applyDeadband(-controller.getLeftY(), deadband)
-        # raw_translation_x = applyDeadband(-controller.getLeftX(), deadband)
-        # raw_rotation = applyDeadband(-controller.getRightX(), deadband)
+        # Apply deadbands
+        raw_translation_y = applyDeadband(-controller.getLeftY(), deadband)
+        raw_translation_x = applyDeadband(-controller.getLeftX(), deadband)
+        raw_rotation = applyDeadband(-controller.getRightX(), deadband)
 
-        # # Convert cartesian (x, y) translation stick coordinates to polar (R, theta) and scale R-value
-        # rawTranslationR = min(1.0, math.sqrt(pow(raw_translation_x, 2) + pow(raw_translation_y, 2)))
-        # translationTheta = math.atan2(raw_translation_y, raw_translation_x)
-        # scaledTranslationR = pow(rawTranslationR, translation_scaling)
+        # Convert cartesian (x, y) translation stick coordinates to polar (R, theta) and scale R-value
+        raw_translation_R = min(1.0, math.sqrt(pow(raw_translation_x, 2) + pow(raw_translation_y, 2)))
+        translation_theta = math.atan2(raw_translation_y, raw_translation_x)
+        scaled_translation_R = pow(raw_translation_R, translation_scaling)
 
-        # # Convert polar coordinates (with scaled R-value) back to cartesian; scale rotation as well
-        # scaledTranslationY = scaledTranslationR * math.sin(translationTheta)
-        # scaledTranslationX = scaledTranslationR * math.cos(translationTheta)
+        # Convert polar coordinates (with scaled R-value) back to cartesian; scale rotation as well
+        scaled_translation_Y = scaled_translation_R * math.sin(translation_theta)
+        scaled_translation_X = scaled_translation_R * math.cos(translation_theta)
 
-        # scaledRotation = pow(raw_rotation, rotaiton_scaling)
+        scaled_rotation = pow(raw_rotation, rotaiton_scaling)
 
         # Apply joystick rate limits and calculate speed
-        # forwardSpeed = self.y_stick_limiter.calculate(scaledTranslationY) * max_vel_mps
-        # sidewaysSpeed = self.x_stick_limiter.calculate(scaledTranslationX) * max_vel_mps
-        # rotationSpeed = self.rot_stick_limiter.calculate(scaledRotation) * max_ang_vel_tps
+        forward_speed_mps = self.y_stick_limiter.calculate(scaled_translation_Y) * max_vel_mps
+        sideways_speed_mps = self.x_stick_limiter.calculate(scaled_translation_X) * max_vel_mps
+        rotation_speed_tps = self.rot_stick_limiter.calculate(scaled_rotation) * max_ang_vel_tps
 
         # Dashboard things
-        # SmartDashboard.putNumber(
-        #     "Drivebase/Joystick Scaling/rawTranslationY", raw_translation_y
-        # )
-        # SmartDashboard.putNumber(
-        #     "Drivebase/Joystick Scaling/rawTranslationX", raw_translation_x
-        # )
-        # SmartDashboard.putNumber(
-        #     "Drivebase/Joystick Scaling/rawTranslationR", rawTranslationR
-        # )
-        # SmartDashboard.putNumber(
-        #     "Drivebase/Joystick Scaling/translationTheta (rad)", translationTheta
-        # )
-        # SmartDashboard.putNumber(
-        #     "Drivebase/Joystick Scaling/scaledTranslationR", scaledTranslationR
-        # )
-        # SmartDashboard.putNumber(
-        #     "Drivebase/Joystick Scaling/scaledTranslationY", scaledTranslationY
-        # )
-        # SmartDashboard.putNumber(
-        #     "Drivebase/Joystick Scaling/scaledTranslationX", scaledTranslationX
-        # )
-        # SmartDashboard.putNumber("Drivebase/Joystick Scaling/rawRotation", raw_rotation)
-        # SmartDashboard.putNumber(
-        #     "Drivebase/Joystick Scaling/scaledRotation", scaledRotation
-        # )
-
-        # return ChassisSpeeds(forwardSpeed, sidewaysSpeed, rotationSpeed)
-        return ChassisSpeeds(
-            -controller.getLeftY() * max_vel_mps,
-            controller.getLeftX() * max_vel_mps,
-            controller.getRightX() * rotationsToRadians(max_ang_vel_tps),
+        SmartDashboard.putNumber(
+            "Drivebase/Joystick Scaling/rawTranslationY", raw_translation_y
         )
+        SmartDashboard.putNumber(
+            "Drivebase/Joystick Scaling/rawTranslationX", raw_translation_x
+        )
+        SmartDashboard.putNumber(
+            "Drivebase/Joystick Scaling/rawTranslationR", raw_translation_R
+        )
+        SmartDashboard.putNumber(
+            "Drivebase/Joystick Scaling/translationTheta (rad)", translation_theta
+        )
+        SmartDashboard.putNumber(
+            "Drivebase/Joystick Scaling/scaledTranslationR", scaled_translation_R
+        )
+        SmartDashboard.putNumber(
+            "Drivebase/Joystick Scaling/scaledTranslationY", scaled_translation_Y
+        )
+        SmartDashboard.putNumber(
+            "Drivebase/Joystick Scaling/scaledTranslationX", scaled_translation_X
+        )
+        SmartDashboard.putNumber("Drivebase/Joystick Scaling/rawRotation", raw_rotation)
+        SmartDashboard.putNumber(
+            "Drivebase/Joystick Scaling/scaledRotation", scaled_rotation
+        )
+
+        return ChassisSpeeds(forward_speed_mps, sideways_speed_mps, rotationsToRadians(rotation_speed_tps))
 
     def joystick_drive(
         self, controller: CommandXboxController, field_oriented: bool = True
