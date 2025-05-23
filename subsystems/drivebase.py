@@ -24,6 +24,7 @@ class Drivebase(Subsystem):
     MAX_ANGULAR_JOYSTICK_ACCEL = 3.0
     TRANSLATION_SCALING = 2.0
     ROTATION_SCALING = 1.0
+    CONFIG_PATH = "drivebase/Config/"
 
     front_left_module = SwerveModule(
         can.drivebaseFrontLeftDrive,
@@ -62,7 +63,6 @@ class Drivebase(Subsystem):
         back_right_location,
     )
 
-    max_speed_mps = 5.0  # m/s
     field_display = Field2d()
 
     def __init__(self):
@@ -82,6 +82,28 @@ class Drivebase(Subsystem):
         self.rot_stick_limiter = SlewRateLimiter(self.tuned_max_angular_joystick_accel)
 
         SmartDashboard.putData("drivebase/Field", self.field_display)
+        SmartDashboard.putNumber(
+            self.CONFIG_PATH + "Joystick Deadband", self.JOYSTICK_DEADBAND
+        )
+        SmartDashboard.putNumber(
+            self.CONFIG_PATH + "Max Velocity", self.MAX_VELOCITY_MPS
+        )
+        SmartDashboard.putNumber(
+            self.CONFIG_PATH + "Max Angular Velocity", self.MAX_ANGULAR_VELOCITY_TPS
+        )
+        SmartDashboard.putNumber(
+            self.CONFIG_PATH + "Max Joystick Accel", self.MAX_JOYSTICK_ACCEL
+        )
+        SmartDashboard.putNumber(
+            self.CONFIG_PATH + "Max Joystick Angular Accel",
+            self.MAX_ANGULAR_JOYSTICK_ACCEL,
+        )
+        SmartDashboard.putNumber(
+            self.CONFIG_PATH + "Translation Scaling", self.TRANSLATION_SCALING
+        )
+        SmartDashboard.putNumber(
+            self.CONFIG_PATH + "Rotation Scaling", self.ROTATION_SCALING
+        )
 
     def periodic(self) -> None:
         self.front_left_module.send_to_dashboard()
@@ -124,27 +146,27 @@ class Drivebase(Subsystem):
 
     def calc_joystick_speeds(self, controller: CommandXboxController):
 
-        configPath = "Drivebase/Config/"
         deadband = SmartDashboard.getNumber(
-            configPath + "Joystick Deadband", self.JOYSTICK_DEADBAND
+            self.CONFIG_PATH + "Joystick Deadband", self.JOYSTICK_DEADBAND
         )
         max_vel_mps = SmartDashboard.getNumber(
-            configPath + "Max Velocity", self.MAX_VELOCITY_MPS
+            self.CONFIG_PATH + "Max Velocity", self.MAX_VELOCITY_MPS
         )
         max_ang_vel_tps = SmartDashboard.getNumber(
-            configPath + "Max Angular Velocity", self.MAX_ANGULAR_VELOCITY_TPS
+            self.CONFIG_PATH + "Max Angular Velocity", self.MAX_ANGULAR_VELOCITY_TPS
         )
         max_joystick_accel = SmartDashboard.getNumber(
-            configPath + "Max Joystick Accel", self.MAX_JOYSTICK_ACCEL
+            self.CONFIG_PATH + "Max Joystick Accel", self.MAX_JOYSTICK_ACCEL
         )
         max_ang_joystick_accel = SmartDashboard.getNumber(
-            configPath + "Max Joystick Angular Accel", self.MAX_ANGULAR_JOYSTICK_ACCEL
+            self.CONFIG_PATH + "Max Joystick Angular Accel",
+            self.MAX_ANGULAR_JOYSTICK_ACCEL,
         )
         translation_scaling = SmartDashboard.getNumber(
-            configPath + "Translation Scaling", self.TRANSLATION_SCALING
+            self.CONFIG_PATH + "Translation Scaling", self.TRANSLATION_SCALING
         )
         rotaiton_scaling = SmartDashboard.getNumber(
-            configPath + "Rotation Scaling", self.ROTATION_SCALING
+            self.CONFIG_PATH + "Rotation Scaling", self.ROTATION_SCALING
         )
 
         # Recreate slew rate limiters if limits have changed
@@ -178,31 +200,16 @@ class Drivebase(Subsystem):
         rotation_speed_tps = self.rot_stick_limiter.calculate(scaled_rotation) * max_ang_vel_tps
 
         # Dashboard things
-        SmartDashboard.putNumber(
-            "Drivebase/Joystick Scaling/rawTranslationY", raw_translation_y
-        )
-        SmartDashboard.putNumber(
-            "Drivebase/Joystick Scaling/rawTranslationX", raw_translation_x
-        )
-        SmartDashboard.putNumber(
-            "Drivebase/Joystick Scaling/rawTranslationR", raw_translation_R
-        )
-        SmartDashboard.putNumber(
-            "Drivebase/Joystick Scaling/translationTheta (rad)", translation_theta
-        )
-        SmartDashboard.putNumber(
-            "Drivebase/Joystick Scaling/scaledTranslationR", scaled_translation_R
-        )
-        SmartDashboard.putNumber(
-            "Drivebase/Joystick Scaling/scaledTranslationY", scaled_translation_Y
-        )
-        SmartDashboard.putNumber(
-            "Drivebase/Joystick Scaling/scaledTranslationX", scaled_translation_X
-        )
-        SmartDashboard.putNumber("Drivebase/Joystick Scaling/rawRotation", raw_rotation)
-        SmartDashboard.putNumber(
-            "Drivebase/Joystick Scaling/scaledRotation", scaled_rotation
-        )
+        path = 'drivebase/Joystick Scaling/'
+        SmartDashboard.putNumber(f"{path}rawTranslationY", raw_translation_y)
+        SmartDashboard.putNumber(f"{path}rawTranslationX", raw_translation_x)
+        SmartDashboard.putNumber(f"{path}rawTranslationR", raw_translation_R)
+        SmartDashboard.putNumber(f"{path}translationTheta (rad)", translation_theta)
+        SmartDashboard.putNumber(f"{path}scaledTranslationR", scaled_translation_R)
+        SmartDashboard.putNumber(f"{path}scaledTranslationY", scaled_translation_Y)
+        SmartDashboard.putNumber(f"{path}scaledTranslationX", scaled_translation_X)
+        SmartDashboard.putNumber(f"{path}rawRotation", raw_rotation)
+        SmartDashboard.putNumber(f"{path}scaledRotation", scaled_rotation)
 
         return ChassisSpeeds(forward_speed_mps, sideways_speed_mps, rotationsToRadians(rotation_speed_tps))
 
@@ -225,7 +232,10 @@ class Drivebase(Subsystem):
             speeds = ChassisSpeeds.discretize(speeds, 0.02)
 
             module_states = self.kinematics.toSwerveModuleStates(speeds)
-            self.kinematics.desaturateWheelSpeeds(module_states, self.max_speed_mps)
+            max_vel_mps = SmartDashboard.getNumber(
+                self.CONFIG_PATH + "Max Velocity", self.MAX_VELOCITY_MPS
+            )
+            self.kinematics.desaturateWheelSpeeds(module_states, max_vel_mps)
 
             [fl, fr, bl, br] = module_states
             self.front_left_module.set_target_state(fl)
