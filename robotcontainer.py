@@ -11,17 +11,21 @@ class RobotContainer:
     periodic methods (other than the scheduler calls). Instead, the structure of the robot (including
     subsystems, commands, and button mappings) should be declared here.
     """
-    intake = Intake()
-    shooter = Shooter()
-    drivebase = Drivebase()
-    driverController = commands2.button.CommandXboxController(0)
 
     def __init__(self) -> None:
-        self.drivebase.setDefaultCommand(self.drivebase.drive(lambda: ChassisSpeeds(-0.5), True))
+        self.intake = Intake()
+        self.shooter = Shooter()
+        self.drivebase = Drivebase()
+        self.driverController = commands2.button.CommandXboxController(0)
+
+        self.drivebase.setDefaultCommand(
+            self.drivebase.joystick_drive(self.driverController, True)
+        )
         self.configureButtonBindings()
 
     def configureButtonBindings(self):
-        self.driverController.a().toggleOnTrue(self.drivebase.drive(lambda: ChassisSpeeds(1), True))
+        # self.driverController.a().onTrue(self.drivebase.point_wheels_left())
+        # self.driverController.b().onTrue(self.drivebase.point_wheels_straight())
         self.driverController.a().whileTrue(self.intake.cmdDeploy().andThen(self.intake.cmdRun()))
         self.driverController.b().onTrue(self.intake.cmdRetract())
         self.driverController.x().onTrue(self.shooter.cmdSpinUp(2000))

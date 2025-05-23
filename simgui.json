@@ -1,6 +1,11 @@
 {
   "HALProvider": {
     "Other Devices": {
+      "Pigeon 2 (v6)[13]": {
+        "header": {
+          "open": true
+        }
+      },
       "SPARK MAX [3]": {
         "header": {
           "open": true
@@ -20,9 +25,6 @@
         "header": {
           "open": true
         }
-      },
-      "window": {
-        "visible": false
       }
     }
   },
@@ -54,7 +56,7 @@
         "drivebase": {
           "open": true,
           "swerve": {
-            "BLdrive": {
+            "FLsteer": {
               "open": true
             },
             "open": true
@@ -203,7 +205,7 @@
             0.0,
             0.8500000238418579
           ],
-          "height": 401,
+          "height": 832,
           "series": [
             {
               "color": [
@@ -225,7 +227,15 @@
             }
           ],
           "yaxis2": true
-        },
+        }
+      ],
+      "window": {
+        "name": "drivebase",
+        "visible": false
+      }
+    },
+    "Plot <3>": {
+      "plots": [
         {
           "backgroundColor": [
             0.0,
@@ -233,17 +243,8 @@
             0.0,
             0.8500000238418579
           ],
-          "height": 401,
+          "height": 978,
           "series": [
-            {
-              "color": [
-                0.5058823823928833,
-                0.44705885648727417,
-                0.7019608020782471,
-                1.0
-              ],
-              "id": "CANMotor:Talon FX (v6)[1]-motorVoltage"
-            },
             {
               "color": [
                 0.7686275243759155,
@@ -251,25 +252,58 @@
                 0.32156863808631897,
                 1.0
               ],
-              "id": "NT:/SmartDashboard/drivebase/swerve/FLdrive/sim current",
-              "yAxis": 1
+              "id": "NT:/SmartDashboard/drivebase/swerve/FLsteer/cancoder"
             },
             {
               "color": [
-                0.3333333432674408,
-                0.658823549747467,
-                0.4078431725502014,
+                0.5058823823928833,
+                0.44705885648727417,
+                0.7019608020782471,
                 1.0
               ],
-              "id": "CANMotor:Talon FX (v6)[1]-torqueCurrent",
-              "yAxis": 1
+              "id": "NT:/SmartDashboard/drivebase/swerve/FLsteer/internal encoder"
+            },
+            {
+              "color": [
+                0.5764706134796143,
+                0.4705882668495178,
+                0.3764706254005432,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/drivebase/swerve/FLsteer/target"
             }
-          ],
-          "yaxis2": true
+          ]
         }
       ],
       "window": {
-        "name": "drivebase"
+        "name": "swerve steer"
+      }
+    },
+    "Plot <4>": {
+      "plots": [
+        {
+          "backgroundColor": [
+            0.0,
+            0.0,
+            0.0,
+            0.8500000238418579
+          ],
+          "height": 332,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "CANGyro:Pigeon 2 (v6)[13]-yaw"
+            }
+          ]
+        }
+      ],
+      "window": {
+        "name": "gyro"
       }
     }
   }
