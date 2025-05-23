@@ -83,10 +83,10 @@ class SwerveModule:
         self.steer_encoder.configurator.apply(steer_encoder_config)
 
     def set_target_state(self, target_state: SwerveModuleState):
-        current_angle = Rotation2d(self.get_turns_from_cancoder())
+        current_angle = Rotation2d(rotationsToRadians(self.get_turns_from_cancoder()))
 
-        # target_state.optimize(current_angle)
-        # target_state.cosineScale(current_angle)
+        target_state.optimize(current_angle)
+        target_state.cosineScale(current_angle)
 
         self.set_target_rotation(target_state.angle)
         self.set_target_linear_velocity(target_state.speed)

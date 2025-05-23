@@ -11,7 +11,7 @@ from wpimath.filter import SlewRateLimiter
 from wpimath import applyDeadband
 from constants import can
 from util.swerve_module import SwerveModule
-from wpimath.units import radiansToDegrees
+from wpimath.units import radiansToDegrees, rotationsToRadians
 import math
 
 class Drivebase(Subsystem):
@@ -205,7 +205,11 @@ class Drivebase(Subsystem):
         # )
 
         # return ChassisSpeeds(forwardSpeed, sidewaysSpeed, rotationSpeed)
-        return ChassisSpeeds(-controller.getLeftY() * max_vel_mps, controller.getLeftX() * max_vel_mps, controller.getRightX() * max_ang_vel_tps)
+        return ChassisSpeeds(
+            -controller.getLeftY() * max_vel_mps,
+            controller.getLeftX() * max_vel_mps,
+            controller.getRightX() * rotationsToRadians(max_ang_vel_tps),
+        )
 
     def joystick_drive(
         self, controller: CommandXboxController, field_oriented: bool = True
@@ -223,7 +227,7 @@ class Drivebase(Subsystem):
                 if field_oriented
                 else speeds
             )
-            # speeds = ChassisSpeeds.discretize(speeds, 0.02)
+            speeds = ChassisSpeeds.discretize(speeds, 0.02)
 
             module_states = self.kinematics.toSwerveModuleStates(speeds)
             self.kinematics.desaturateWheelSpeeds(module_states, self.max_speed_mps)
