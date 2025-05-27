@@ -26,7 +26,7 @@ class MyRobot(commands2.TimedCommandRobot):
 
     def autonomousPeriodic(self):
         """This function is called periodically during autonomous."""
-        self.autonomousCommand = self.container.getAutonomousCommand()
+        self.autonomousCommand = self.container.get_autonomous_command()
 
         if self.autonomousCommand:
             self.autonomousCommand.schedule()

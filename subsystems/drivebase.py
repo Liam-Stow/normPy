@@ -97,7 +97,7 @@ class Drivebase(Subsystem):
             ),
             RobotConfig.fromGUISettings(),
             self.should_flip_path,
-            self
+            self,
         )
 
         # Dashboard
@@ -140,8 +140,12 @@ class Drivebase(Subsystem):
         self.back_right_module.update_sim()
 
         # Adjust gyro angle
-        rot_speed_rad_per_sec = self.kinematics.toChassisSpeeds(self.get_module_states()).omega
-        change_in_rot_deg = radiansToDegrees(rot_speed_rad_per_sec) * 0.02 # 0.02 seconds per loop
+        rot_speed_rad_per_sec = self.kinematics.toChassisSpeeds(
+            self.get_module_states()
+        ).omega
+        change_in_rot_deg = (
+            radiansToDegrees(rot_speed_rad_per_sec) * 0.02
+        )  # 0.02 seconds per loop
         self.gyro.sim_state.add_yaw(change_in_rot_deg)
 
     def update_odometry(self) -> None:
@@ -154,18 +158,22 @@ class Drivebase(Subsystem):
         return DriverStation.getAlliance() == DriverStation.Alliance.kRed
 
     def get_pose(self) -> Pose2d:
-        return self.pose_estimator.getEstimatedPosition()
+        return self.pose_estimatwor.getEstimatedPosition()
 
     def set_pose(self, pose: Pose2d) -> None:
-        # self.set_gyro_rotation(pose.rotation(), False)
         self.pose_estimator.resetPosition(
             self.get_gyro_rotation(flip_on_red_alliance=True),
             self.get_module_positions(),
             pose,
         )
 
-    def set_gyro_rotation(self, rotation: Rotation2d, flip_on_red_alliance: bool) -> None:
-        if flip_on_red_alliance and DriverStation.getAlliance() == DriverStation.Alliance.kRed:
+    def set_gyro_rotation(
+        self, rotation: Rotation2d, flip_on_red_alliance: bool
+    ) -> None:
+        if (
+            flip_on_red_alliance
+            and DriverStation.getAlliance() == DriverStation.Alliance.kRed
+        ):
             rotation = rotation.rotateBy(Rotation2d.fromRotations(0.5))
         self.gyro.set_yaw(rotation.degrees())
 
@@ -208,7 +216,9 @@ class Drivebase(Subsystem):
         raw_rotation = applyDeadband(-controller.getRightX(), deadband)
 
         # Convert cartesian (x, y) translation stick coordinates to polar (R, theta) and scale R-value
-        raw_translation_R = min(1.0, math.sqrt(pow(raw_translation_x, 2) + pow(raw_translation_y, 2)))
+        raw_translation_R = min(
+            1.0, math.sqrt(pow(raw_translation_x, 2) + pow(raw_translation_y, 2))
+        )
         translation_theta = math.atan2(raw_translation_y, raw_translation_x)
         scaled_translation_R = pow(raw_translation_R, translation_scaling)
 
@@ -219,12 +229,18 @@ class Drivebase(Subsystem):
         scaled_rotation = pow(raw_rotation, rotaiton_scaling)
 
         # Apply joystick rate limits and calculate speed
-        forward_speed_mps = self.y_stick_limiter.calculate(scaled_translation_Y) * max_vel_mps
-        sideways_speed_mps = self.x_stick_limiter.calculate(scaled_translation_X) * max_vel_mps
-        rotation_speed_tps = self.rot_stick_limiter.calculate(scaled_rotation) * max_ang_vel_tps
+        forward_speed_mps = (
+            self.y_stick_limiter.calculate(scaled_translation_Y) * max_vel_mps
+        )
+        sideways_speed_mps = (
+            self.x_stick_limiter.calculate(scaled_translation_X) * max_vel_mps
+        )
+        rotation_speed_tps = (
+            self.rot_stick_limiter.calculate(scaled_rotation) * max_ang_vel_tps
+        )
 
         # Dashboard things
-        path = 'drivebase/Joystick Scaling/'
+        path = "drivebase/Joystick Scaling/"
         SmartDashboard.putNumber(f"{path}rawTranslationY", raw_translation_y)
         SmartDashboard.putNumber(f"{path}rawTranslationX", raw_translation_x)
         SmartDashboard.putNumber(f"{path}rawTranslationR", raw_translation_R)
@@ -235,7 +251,11 @@ class Drivebase(Subsystem):
         SmartDashboard.putNumber(f"{path}rawRotation", raw_rotation)
         SmartDashboard.putNumber(f"{path}scaledRotation", scaled_rotation)
 
-        return ChassisSpeeds(forward_speed_mps, sideways_speed_mps, rotationsToRadians(rotation_speed_tps))
+        return ChassisSpeeds(
+            forward_speed_mps,
+            sideways_speed_mps,
+            rotationsToRadians(rotation_speed_tps),
+        )
 
     def joystick_drive(
         self, controller: CommandXboxController, field_oriented: bool = True
@@ -283,6 +303,7 @@ class Drivebase(Subsystem):
             self.front_right_module.set_target_angle(0.25)
             self.back_left_module.set_target_angle(0.25)
             self.back_right_module.set_target_angle(0.25)
+
         return super().run(loop)
 
     def point_wheels_straight(self) -> Command:
@@ -291,10 +312,14 @@ class Drivebase(Subsystem):
             self.front_right_module.set_target_angle(0)
             self.back_left_module.set_target_angle(0)
             self.back_right_module.set_target_angle(0)
+
         return super().run(loop)
 
     def get_gyro_rotation(self, flip_on_red_alliance: bool) -> Rotation2d:
-        if flip_on_red_alliance and DriverStation.getAlliance() == DriverStation.Alliance.kRed:
+        if (
+            flip_on_red_alliance
+            and DriverStation.getAlliance() == DriverStation.Alliance.kRed
+        ):
             return self.gyro.getRotation2d().rotateBy(Rotation2d.fromRotations(0.5))
         else:
             return self.gyro.getRotation2d()

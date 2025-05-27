@@ -5,6 +5,7 @@ from subsystems.drivebase import Drivebase
 from wpilib import SmartDashboard
 from pathplannerlib.auto import AutoBuilder
 
+
 class RobotContainer:
     """
     This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -26,17 +27,19 @@ class RobotContainer:
         self.auto_chooser = AutoBuilder.buildAutoChooser()
         SmartDashboard.putData("Auto Chooser", self.auto_chooser)
 
-        self.configureButtonBindings()
+        self.configure_button_bindings()
 
-    def configureButtonBindings(self):
+    def configure_button_bindings(self):
         # self.driverController.a().onTrue(self.drivebase.point_wheels_left())
         # self.driverController.b().onTrue(self.drivebase.point_wheels_straight())
-        self.driver_controller.a().whileTrue(self.intake.cmdDeploy().andThen(self.intake.cmdRun()))
-        self.driver_controller.b().onTrue(self.intake.cmdRetract())
-        self.driver_controller.x().onTrue(self.shooter.cmdSpinUp(2000))
-        self.driver_controller.y().onTrue(self.shooter.cmdSpinUp(0))
-        self.driver_controller.back().onTrue(self.shooter.cmdAimHigh())
-        self.driver_controller.start().onTrue(self.shooter.cmdAimLow())
+        self.driver_controller.a().whileTrue(
+            self.intake.deploy().andThen(self.intake.spin_in())
+        )
+        self.driver_controller.b().onTrue(self.intake.retract())
+        self.driver_controller.x().onTrue(self.shooter.spin_up(2000))
+        self.driver_controller.y().onTrue(self.shooter.spin_up(0))
+        self.driver_controller.back().onTrue(self.shooter.aim_high())
+        self.driver_controller.start().onTrue(self.shooter.aim_low())
 
-    def getAutonomousCommand(self) -> commands2.Command:
+    def get_autonomous_command(self) -> commands2.Command:
         return self.auto_chooser.getSelected()
