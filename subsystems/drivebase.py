@@ -1,21 +1,22 @@
+import math
 from typing import Callable
 
 from commands2 import Command, Subsystem
 from commands2.button import CommandXboxController
 from phoenix6.hardware.pigeon2 import Pigeon2
 from wpilib import DriverStation, Field2d, SmartDashboard
+from wpimath import applyDeadband
 from wpimath.estimator import SwerveDrive4PoseEstimator
+from wpimath.filter import SlewRateLimiter
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.kinematics import ChassisSpeeds, SwerveDrive4Kinematics
-from wpimath.filter import SlewRateLimiter
-from wpimath import applyDeadband
+from wpimath.units import radiansToDegrees, rotationsToRadians
+
 from constants import can
 from util.swerve_module import SwerveModule
-from wpimath.units import radiansToDegrees, rotationsToRadians
-import math
+
 
 class Drivebase(Subsystem):
-    gyro = Pigeon2(can.drivebaseGyro)
 
     JOYSTICK_DEADBAND = 0.05
     MAX_VELOCITY_MPS = 5.0
@@ -26,61 +27,66 @@ class Drivebase(Subsystem):
     ROTATION_SCALING = 1.0
     CONFIG_PATH = "drivebase/Config/"
 
-    front_left_module = SwerveModule(
-        can.drivebaseFrontLeftDrive,
-        can.drivebaseFrontLeftSteer,
-        can.drivebaseFrontLeftEncoder,
-        "FL",
-    )
-    front_right_module = SwerveModule(
-        can.drivebaseFrontRightDrive,
-        can.drivebaseFrontRightSteer,
-        can.drivebaseFrontRightEncoder,
-        "FR",
-    )
-    back_left_module = SwerveModule(
-        can.drivebaseBackLeftDrive,
-        can.drivebaseBackLeftSteer,
-        can.drivebaseBackLeftEncoder,
-        "BL",
-    )
-    back_right_module = SwerveModule(
-        can.drivebaseBackRightDrive,
-        can.drivebaseBackRightSteer,
-        can.drivebaseBackRightEncoder,
-        "BR",
-    )
-
-    front_left_location = Translation2d(0.381, 0.381)
-    front_right_location = Translation2d(0.381, -0.381)
-    back_left_location = Translation2d(-0.381, 0.381)
-    back_right_location = Translation2d(-0.381, -0.381)
-
-    kinematics = SwerveDrive4Kinematics(
-        front_left_location,
-        front_right_location,
-        back_left_location,
-        back_right_location,
-    )
-
-    field_display = Field2d()
-
     def __init__(self):
-        module_positions = (
+        # Coponents: gyro and modules
+        self.gyro = Pigeon2(can.drivebaseGyro)
+        self.front_left_module = SwerveModule(
+            can.drivebaseFrontLeftDrive,
+            can.drivebaseFrontLeftSteer,
+            can.drivebaseFrontLeftEncoder,
+            "FL",
+        )
+        self.front_right_module = SwerveModule(
+            can.drivebaseFrontRightDrive,
+            can.drivebaseFrontRightSteer,
+            can.drivebaseFrontRightEncoder,
+            "FR",
+        )
+        self.back_left_module = SwerveModule(
+            can.drivebaseBackLeftDrive,
+            can.drivebaseBackLeftSteer,
+            can.drivebaseBackLeftEncoder,
+            "BL",
+        )
+        self.back_right_module = SwerveModule(
+            can.drivebaseBackRightDrive,
+            can.drivebaseBackRightSteer,
+            can.drivebaseBackRightEncoder,
+            "BR",
+        )
+
+        # Kinematics
+        self.front_left_location = Translation2d(0.381, 0.381)
+        self.front_right_location = Translation2d(0.381, -0.381)
+        self.back_left_location = Translation2d(-0.381, 0.381)
+        self.back_right_location = Translation2d(-0.381, -0.381)
+        self.kinematics = SwerveDrive4Kinematics(
+            self.front_left_location,
+            self.front_right_location,
+            self.back_left_location,
+            self.back_right_location,
+        )
+
+        # Pose estimation
+        self.module_positions = (
             self.front_left_module.get_position_from_cancoder(),
             self.front_right_module.get_position_from_cancoder(),
             self.back_left_module.get_position_from_cancoder(),
             self.back_right_module.get_position_from_cancoder(),
         )
         self.pose_estimator = SwerveDrive4PoseEstimator(
-            self.kinematics, Rotation2d(0), module_positions, Pose2d()
+            self.kinematics, Rotation2d(0), self.module_positions, Pose2d()
         )
+
+        # Driving filters config
         self.tuned_max_joystick_accel = self.MAX_JOYSTICK_ACCEL
         self.tuned_max_angular_joystick_accel = self.MAX_ANGULAR_JOYSTICK_ACCEL
         self.x_stick_limiter = SlewRateLimiter(self.tuned_max_joystick_accel)
         self.y_stick_limiter = SlewRateLimiter(self.tuned_max_joystick_accel)
         self.rot_stick_limiter = SlewRateLimiter(self.tuned_max_angular_joystick_accel)
 
+        # Dashboard
+        self.field_display = Field2d()
         SmartDashboard.putData("drivebase/Field", self.field_display)
         SmartDashboard.putNumber(
             self.CONFIG_PATH + "Joystick Deadband", self.JOYSTICK_DEADBAND
