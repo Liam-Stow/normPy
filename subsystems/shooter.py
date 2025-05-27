@@ -99,8 +99,8 @@ class Shooter(commands2.Subsystem):
             lambda: self.angle_solenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
         )
 
-    def is_at_target_speed(self) -> bool:
-        return (
-            self.left_encoder.getVelocity() == self.target_RPM
+    def at_target_speed(self) -> commands2.button.Trigger:
+        return commands2.button.Trigger(
+            lambda: self.left_encoder.getVelocity() == self.target_RPM
             and self.right_encoder.getVelocity() == self.target_RPM
         )

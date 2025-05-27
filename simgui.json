@@ -1,7 +1,7 @@
 {
   "HALProvider": {
     "Other Devices": {
-      "Pigeon 2 (v6)[13]": {
+      "SPARK MAX [16]": {
         "header": {
           "open": true
         }
@@ -63,7 +63,6 @@
           "Config": {
             "open": true
           },
-          "open": true,
           "swerve": {
             "FLsteer": {
               "open": true
