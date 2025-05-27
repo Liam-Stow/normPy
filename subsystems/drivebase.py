@@ -11,13 +11,17 @@ from wpimath.filter import SlewRateLimiter
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.kinematics import ChassisSpeeds, SwerveDrive4Kinematics
 from wpimath.units import radiansToDegrees, rotationsToRadians
+from wpimath.kinematics import SwerveModulePosition, SwerveModuleState
+from pathplannerlib.auto import AutoBuilder
+from pathplannerlib.controller import PPHolonomicDriveController
+from pathplannerlib.config import RobotConfig, PIDConstants
+from pathplannerlib.util import DriveFeedforwards
 
 from constants import can
 from util.swerve_module import SwerveModule
 
 
 class Drivebase(Subsystem):
-
     JOYSTICK_DEADBAND = 0.05
     MAX_VELOCITY_MPS = 5.0
     MAX_ANGULAR_VELOCITY_TPS = 0.8
@@ -68,14 +72,8 @@ class Drivebase(Subsystem):
         )
 
         # Pose estimation
-        self.module_positions = (
-            self.front_left_module.get_position_from_cancoder(),
-            self.front_right_module.get_position_from_cancoder(),
-            self.back_left_module.get_position_from_cancoder(),
-            self.back_right_module.get_position_from_cancoder(),
-        )
         self.pose_estimator = SwerveDrive4PoseEstimator(
-            self.kinematics, Rotation2d(0), self.module_positions, Pose2d()
+            self.kinematics, Rotation2d(0), self.get_module_positions(), Pose2d()
         )
 
         # Driving filters config
@@ -84,6 +82,23 @@ class Drivebase(Subsystem):
         self.x_stick_limiter = SlewRateLimiter(self.tuned_max_joystick_accel)
         self.y_stick_limiter = SlewRateLimiter(self.tuned_max_joystick_accel)
         self.rot_stick_limiter = SlewRateLimiter(self.tuned_max_angular_joystick_accel)
+
+        # Pathplanner config
+        AutoBuilder.configure(
+            self.get_pose,
+            self.set_pose,
+            self.get_robot_relative_speeds,
+            lambda speeds, feedforwards: self.__drive_implementation(
+                speeds, feedforwards, False
+            ),
+            PPHolonomicDriveController(
+                PIDConstants(3.2, 0, 0.3),  # Translation PID
+                PIDConstants(1.5, 0, 0),  # Rotation PID
+            ),
+            RobotConfig.fromGUISettings(),
+            self.should_flip_path,
+            self
+        )
 
         # Dashboard
         self.field_display = Field2d()
@@ -125,33 +140,36 @@ class Drivebase(Subsystem):
         self.back_right_module.update_sim()
 
         # Adjust gyro angle
-        module_states = (
-             self.front_left_module.get_state_from_internal_encoders(),
-             self.front_right_module.get_state_from_internal_encoders(),
-             self.back_left_module.get_state_from_internal_encoders(),
-             self.back_right_module.get_state_from_internal_encoders(),
-        )
-        rot_speed_rad_per_sec = self.kinematics.toChassisSpeeds(module_states).omega
+        rot_speed_rad_per_sec = self.kinematics.toChassisSpeeds(self.get_module_states()).omega
         change_in_rot_deg = radiansToDegrees(rot_speed_rad_per_sec) * 0.02 # 0.02 seconds per loop
         self.gyro.sim_state.add_yaw(change_in_rot_deg)
 
     def update_odometry(self) -> None:
-        module_positions = (
-            self.front_left_module.get_position_from_cancoder(),
-            self.front_right_module.get_position_from_cancoder(),
-            self.back_left_module.get_position_from_cancoder(),
-            self.back_right_module.get_position_from_cancoder(),
-        )
-
-        rotation = self.get_gyro_rotation()
-        if DriverStation.getAlliance() == DriverStation.Alliance.kRed:
-            rotation -= Rotation2d.fromRotations(0.5)
-        self.pose_estimator.update(rotation, module_positions)
+        rotation = self.get_gyro_rotation(flip_on_red_alliance=True)
+        self.pose_estimator.update(rotation, self.get_module_positions())
 
         self.field_display.setRobotPose(self.pose_estimator.getEstimatedPosition())
 
-    def calc_joystick_speeds(self, controller: CommandXboxController):
+    def should_flip_path(self):
+        return DriverStation.getAlliance() == DriverStation.Alliance.kRed
 
+    def get_pose(self) -> Pose2d:
+        return self.pose_estimator.getEstimatedPosition()
+
+    def set_pose(self, pose: Pose2d) -> None:
+        # self.set_gyro_rotation(pose.rotation(), False)
+        self.pose_estimator.resetPosition(
+            self.get_gyro_rotation(flip_on_red_alliance=True),
+            self.get_module_positions(),
+            pose,
+        )
+
+    def set_gyro_rotation(self, rotation: Rotation2d, flip_on_red_alliance: bool) -> None:
+        if flip_on_red_alliance and DriverStation.getAlliance() == DriverStation.Alliance.kRed:
+            rotation = rotation.rotateBy(Rotation2d.fromRotations(0.5))
+        self.gyro.set_yaw(rotation.degrees())
+
+    def calc_joystick_speeds(self, controller: CommandXboxController):
         deadband = SmartDashboard.getNumber(
             self.CONFIG_PATH + "Joystick Deadband", self.JOYSTICK_DEADBAND
         )
@@ -227,29 +245,37 @@ class Drivebase(Subsystem):
     def drive(
         self, speeds: Callable[[], ChassisSpeeds], field_oriented: bool
     ) -> Command:
-        def drive_loop(speeds: ChassisSpeeds):
-            speeds = (
-                ChassisSpeeds.fromFieldRelativeSpeeds(
-                    speeds.vx, speeds.vy, speeds.omega, self.get_gyro_rotation()
-                )
-                if field_oriented
-                else speeds
+        return super().run(
+            lambda: self.__drive_implementation(speeds(), None, field_oriented)
+        )
+
+    def __drive_implementation(
+        self,
+        speeds: ChassisSpeeds,
+        feedforwards: DriveFeedforwards,
+        field_oriented: bool,
+    ):
+        if field_oriented:
+            speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                speeds.vx,
+                speeds.vy,
+                speeds.omega,
+                self.get_gyro_rotation(flip_on_red_alliance=False),
             )
-            speeds = ChassisSpeeds.discretize(speeds, 0.02)
 
-            module_states = self.kinematics.toSwerveModuleStates(speeds)
-            max_vel_mps = SmartDashboard.getNumber(
-                self.CONFIG_PATH + "Max Velocity", self.MAX_VELOCITY_MPS
-            )
-            self.kinematics.desaturateWheelSpeeds(module_states, max_vel_mps)
+        speeds = ChassisSpeeds.discretize(speeds, 0.02)
 
-            [fl, fr, bl, br] = module_states
-            self.front_left_module.set_target_state(fl)
-            self.front_right_module.set_target_state(fr)
-            self.back_left_module.set_target_state(bl)
-            self.back_right_module.set_target_state(br)
+        module_states = self.kinematics.toSwerveModuleStates(speeds)
+        max_vel_mps = SmartDashboard.getNumber(
+            self.CONFIG_PATH + "Max Velocity", self.MAX_VELOCITY_MPS
+        )
+        self.kinematics.desaturateWheelSpeeds(module_states, max_vel_mps)
 
-        return super().run(lambda: drive_loop(speeds()))
+        [fl, fr, bl, br] = module_states
+        self.front_left_module.set_target_state(fl)
+        self.front_right_module.set_target_state(fr)
+        self.back_left_module.set_target_state(bl)
+        self.back_right_module.set_target_state(br)
 
     def point_wheels_left(self) -> Command:
         def loop():
@@ -267,5 +293,41 @@ class Drivebase(Subsystem):
             self.back_right_module.set_target_angle(0)
         return super().run(loop)
 
-    def get_gyro_rotation(self) -> Rotation2d:
-        return self.gyro.getRotation2d()
+    def get_gyro_rotation(self, flip_on_red_alliance: bool) -> Rotation2d:
+        if flip_on_red_alliance and DriverStation.getAlliance() == DriverStation.Alliance.kRed:
+            return self.gyro.getRotation2d().rotateBy(Rotation2d.fromRotations(0.5))
+        else:
+            return self.gyro.getRotation2d()
+
+    def get_module_positions(
+        self,
+    ) -> tuple[
+        SwerveModulePosition,
+        SwerveModulePosition,
+        SwerveModulePosition,
+        SwerveModulePosition,
+    ]:
+        return (
+            self.front_left_module.get_position_from_cancoder(),
+            self.front_right_module.get_position_from_cancoder(),
+            self.back_left_module.get_position_from_cancoder(),
+            self.back_right_module.get_position_from_cancoder(),
+        )
+
+    def get_module_states(
+        self,
+    ) -> tuple[
+        SwerveModuleState,
+        SwerveModuleState,
+        SwerveModuleState,
+        SwerveModuleState,
+    ]:
+        return (
+            self.front_left_module.get_state_from_cancoder(),
+            self.front_right_module.get_state_from_cancoder(),
+            self.back_left_module.get_state_from_cancoder(),
+            self.back_right_module.get_state_from_cancoder(),
+        )
+
+    def get_robot_relative_speeds(self) -> ChassisSpeeds:
+        return self.kinematics.toChassisSpeeds(self.get_module_states())
