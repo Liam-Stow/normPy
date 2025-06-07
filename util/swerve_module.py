@@ -4,7 +4,6 @@ import phoenix6.controls as controls
 import phoenix6.signals as signals
 import wpilib
 import wpilib.simulation
-from phoenix6.base_status_signal import BaseStatusSignal
 from phoenix6.configs import CANcoderConfiguration, TalonFXConfiguration
 from phoenix6.hardware.cancoder import CANcoder
 from phoenix6.hardware.talon_fx import TalonFX

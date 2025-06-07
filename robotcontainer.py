@@ -5,7 +5,8 @@ from subsystems.drivebase import Drivebase
 from wpilib import SmartDashboard
 from wpilib.interfaces import GenericHID
 from pathplannerlib.auto import AutoBuilder
-
+from subsystems.vision import Vision
+from wpimath.units import seconds
 
 class RobotContainer:
     """
@@ -14,11 +15,12 @@ class RobotContainer:
     periodic methods (other than the scheduler calls). Instead, the structure of the robot (including
     subsystems, commands, and button mappings) should be declared here.
     """
+    intake = Intake()
+    shooter = Shooter()
+    drivebase = Drivebase()
+    vision = Vision()
 
     def __init__(self) -> None:
-        self.intake = Intake()
-        self.shooter = Shooter()
-        self.drivebase = Drivebase()
         self.driver_controller = commands2.button.CommandXboxController(0)
 
         self.drivebase.setDefaultCommand(
@@ -47,7 +49,7 @@ class RobotContainer:
     def get_autonomous_command(self) -> commands2.Command:
         return self.auto_chooser.getSelected()
 
-    def rumble(self, seconds) -> commands2.Command:
+    def rumble(self, seconds: seconds) -> commands2.Command:
         return (
             commands2.cmd.runOnce(
                 lambda: self.driver_controller.setRumble(
