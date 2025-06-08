@@ -2,8 +2,7 @@ from math import pi
 from photonlibpy.photonCamera import PhotonCamera
 from photonlibpy.photonPoseEstimator import PhotonPoseEstimator, PoseStrategy
 from photonlibpy.simulation import PhotonCameraSim, VisionSystemSim
-from robotcontainer import RobotContainer
-from wpimath.geometry import Transform3d, Rotation3d
+from wpimath.geometry import Transform3d, Rotation3d, Pose2d
 from robotpy_apriltag import AprilTagFieldLayout, AprilTagField
 
 class Vision:
@@ -24,7 +23,7 @@ class Vision:
     def periodic(self):
         pass
 
-    def simulationPeriodic(self):
-        self.vision_sim.update(RobotContainer.drivebase.get_pose())
+    def update_sim_pose(self, pose: Pose2d):
+        self.vision_sim.update(pose)
 
     

@@ -2,10 +2,13 @@ import commands2
 from subsystems.intake import Intake
 from subsystems.shooter import Shooter
 from subsystems.drivebase import Drivebase
-from wpilib import SmartDashboard
-from wpilib.interfaces import GenericHID
-from pathplannerlib.auto import AutoBuilder
 from subsystems.vision import Vision
+from util.pose_estimator import PoseEstimator
+from wpilib import SmartDashboard, DriverStation
+from wpilib.interfaces import GenericHID
+from pathplannerlib.auto import AutoBuilder # type: ignore
+from pathplannerlib.controller import PPHolonomicDriveController # type: ignore
+from pathplannerlib.config import RobotConfig, PIDConstants # type: ignore
 from wpimath.units import seconds
 
 class RobotContainer:
@@ -15,16 +18,34 @@ class RobotContainer:
     periodic methods (other than the scheduler calls). Instead, the structure of the robot (including
     subsystems, commands, and button mappings) should be declared here.
     """
-    intake = Intake()
-    shooter = Shooter()
-    drivebase = Drivebase()
-    vision = Vision()
 
     def __init__(self) -> None:
+        self.intake = Intake()
+        self.shooter = Shooter()
+        self.drivebase = Drivebase()
+        self.vision = Vision()
+        self.pose_estimator = PoseEstimator(self.drivebase, self.vision)
         self.driver_controller = commands2.button.CommandXboxController(0)
 
         self.drivebase.setDefaultCommand(
             self.drivebase.joystick_drive(self.driver_controller, True)
+        )
+
+        # Pathplanner config
+        AutoBuilder.configure(
+            self.pose_estimator.get_pose,
+            self.pose_estimator.set_pose,
+            self.drivebase.get_robot_relative_speeds,
+            lambda speeds, feedforwards: self.drivebase.drive_implementation(
+                speeds, feedforwards, False
+            ),
+            PPHolonomicDriveController(
+                PIDConstants(3.2, 0, 0.3),# Translation PID
+                PIDConstants(1.5, 0, 0),  # Rotation PID
+            ),
+            RobotConfig.fromGUISettings(),
+            self.should_flip_path,
+            self.drivebase,
         )
 
         self.auto_chooser = AutoBuilder.buildAutoChooser()
@@ -65,3 +86,6 @@ class RobotContainer:
                 )
             )
         )
+    
+    def should_flip_path(self) -> bool:
+        return DriverStation.getAlliance() == DriverStation.Alliance.kRed

@@ -4,18 +4,15 @@ from typing import Callable
 from commands2 import Command, Subsystem
 from commands2.button import CommandXboxController
 from phoenix6.hardware.pigeon2 import Pigeon2
-from wpilib import DriverStation, Field2d, SmartDashboard
+from wpilib import DriverStation, SmartDashboard
 from wpimath import applyDeadband
-from wpimath.estimator import SwerveDrive4PoseEstimator
 from wpimath.filter import SlewRateLimiter
-from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+from wpimath.geometry import Rotation2d, Translation2d
 from wpimath.kinematics import ChassisSpeeds, SwerveDrive4Kinematics
 from wpimath.units import radiansToDegrees, rotationsToRadians
 from wpimath.kinematics import SwerveModulePosition, SwerveModuleState
-from pathplannerlib.auto import AutoBuilder
-from pathplannerlib.controller import PPHolonomicDriveController
-from pathplannerlib.config import RobotConfig, PIDConstants
-from pathplannerlib.util import DriveFeedforwards
+
+from pathplannerlib.util import DriveFeedforwards # type: ignore
 
 from constants import can
 from util.swerve_module import SwerveModule
@@ -71,11 +68,6 @@ class Drivebase(Subsystem):
             self.back_right_location,
         )
 
-        # Pose estimation
-        self.pose_estimator = SwerveDrive4PoseEstimator(
-            self.kinematics, Rotation2d(0), self.get_module_positions(), Pose2d()
-        )
-
         # Driving filters config
         self.tuned_max_joystick_accel = self.MAX_JOYSTICK_ACCEL
         self.tuned_max_angular_joystick_accel = self.MAX_ANGULAR_JOYSTICK_ACCEL
@@ -83,26 +75,8 @@ class Drivebase(Subsystem):
         self.y_stick_limiter = SlewRateLimiter(self.tuned_max_joystick_accel)
         self.rot_stick_limiter = SlewRateLimiter(self.tuned_max_angular_joystick_accel)
 
-        # Pathplanner config
-        AutoBuilder.configure(
-            self.get_pose,
-            self.set_pose,
-            self.get_robot_relative_speeds,
-            lambda speeds, feedforwards: self.__drive_implementation(
-                speeds, feedforwards, False
-            ),
-            PPHolonomicDriveController(
-                PIDConstants(3.2, 0, 0.3),  # Translation PID
-                PIDConstants(1.5, 0, 0),  # Rotation PID
-            ),
-            RobotConfig.fromGUISettings(),
-            self.should_flip_path,
-            self,
-        )
-
         # Dashboard
-        self.field_display = Field2d()
-        SmartDashboard.putData("drivebase/Field", self.field_display)
+
         SmartDashboard.putNumber(
             self.CONFIG_PATH + "Joystick Deadband", self.JOYSTICK_DEADBAND
         )
@@ -131,7 +105,6 @@ class Drivebase(Subsystem):
         self.front_right_module.send_to_dashboard()
         self.back_left_module.send_to_dashboard()
         self.back_right_module.send_to_dashboard()
-        self.update_odometry()
 
     def simulationPeriodic(self) -> None:
         self.front_left_module.update_sim()
@@ -148,24 +121,6 @@ class Drivebase(Subsystem):
         )  # 0.02 seconds per loop
         self.gyro.sim_state.add_yaw(change_in_rot_deg)
 
-    def update_odometry(self) -> None:
-        rotation = self.get_gyro_rotation(flip_on_red_alliance=True)
-        self.pose_estimator.update(rotation, self.get_module_positions())
-
-        self.field_display.setRobotPose(self.pose_estimator.getEstimatedPosition())
-
-    def should_flip_path(self):
-        return DriverStation.getAlliance() == DriverStation.Alliance.kRed
-
-    def get_pose(self) -> Pose2d:
-        return self.pose_estimatwor.getEstimatedPosition()
-
-    def set_pose(self, pose: Pose2d) -> None:
-        self.pose_estimator.resetPosition(
-            self.get_gyro_rotation(flip_on_red_alliance=True),
-            self.get_module_positions(),
-            pose,
-        )
 
     def set_gyro_rotation(
         self, rotation: Rotation2d, flip_on_red_alliance: bool
@@ -194,10 +149,10 @@ class Drivebase(Subsystem):
             self.CONFIG_PATH + "Max Joystick Angular Accel",
             self.MAX_ANGULAR_JOYSTICK_ACCEL,
         )
-        translation_scaling = SmartDashboard.getNumber(
+        translation_scaling: float = SmartDashboard.getNumber(
             self.CONFIG_PATH + "Translation Scaling", self.TRANSLATION_SCALING
         )
-        rotaiton_scaling = SmartDashboard.getNumber(
+        rotaiton_scaling: float = SmartDashboard.getNumber(
             self.CONFIG_PATH + "Rotation Scaling", self.ROTATION_SCALING
         )
 
@@ -266,13 +221,13 @@ class Drivebase(Subsystem):
         self, speeds: Callable[[], ChassisSpeeds], field_oriented: bool
     ) -> Command:
         return super().run(
-            lambda: self.__drive_implementation(speeds(), None, field_oriented)
+            lambda: self.drive_implementation(speeds(), None, field_oriented)
         )
 
-    def __drive_implementation(
+    def drive_implementation(
         self,
         speeds: ChassisSpeeds,
-        feedforwards: DriveFeedforwards,
+        feedforwards: DriveFeedforwards | None,
         field_oriented: bool,
     ):
         if field_oriented:
