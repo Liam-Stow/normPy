@@ -1,4 +1,3 @@
-from math import pi
 from statistics import mean
 from commands2 import Subsystem
 from photonlibpy import EstimatedRobotPose
