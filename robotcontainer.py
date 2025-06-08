@@ -10,6 +10,7 @@ from pathplannerlib.auto import AutoBuilder # type: ignore
 from pathplannerlib.controller import PPHolonomicDriveController # type: ignore
 from pathplannerlib.config import RobotConfig, PIDConstants # type: ignore
 from wpimath.units import seconds
+from wpimath.geometry import Pose2d
 
 class RobotContainer:
     """
@@ -57,8 +58,9 @@ class RobotContainer:
     def configure_button_bindings(self):
         self.driver_controller.a().whileTrue(
             self.intake.deploy().andThen(self.intake.spin_in())
-        )
-        self.driver_controller.b().onTrue(self.intake.retract())
+        ).onFalse(self.intake.retract())
+
+        self.driver_controller.b().whileTrue(self.drivebase.drive(lambda: self.drivebase.calc_drive_to_pose_speeds(self.pose_estimator.get_pose(), Pose2d(1, 1, 0)),True))
         self.driver_controller.x().onTrue(self.shooter.spin_up(2000))
         self.driver_controller.y().onTrue(self.shooter.spin_up(0))
         self.driver_controller.back().onTrue(self.shooter.aim_high())

@@ -7,11 +7,11 @@ from phoenix6.hardware.pigeon2 import Pigeon2
 from wpilib import DriverStation, SmartDashboard
 from wpimath import applyDeadband
 from wpimath.filter import SlewRateLimiter
-from wpimath.geometry import Rotation2d, Translation2d
+from wpimath.geometry import Rotation2d, Translation2d, Pose2d
 from wpimath.kinematics import ChassisSpeeds, SwerveDrive4Kinematics
 from wpimath.units import radiansToDegrees, rotationsToRadians
 from wpimath.kinematics import SwerveModulePosition, SwerveModuleState
-
+from wpimath.controller import PIDController
 from pathplannerlib.util import DriveFeedforwards # type: ignore
 
 from constants import can
@@ -68,6 +68,10 @@ class Drivebase(Subsystem):
             self.back_right_location,
         )
 
+        # PID for teleop drive (not pathplanner)
+        self.translation_pid = PIDController(4, 0, 0.15)
+        self.rotation_pid = PIDController(4, 0, 0.15)
+
         # Driving filters config
         self.tuned_max_joystick_accel = self.MAX_JOYSTICK_ACCEL
         self.tuned_max_angular_joystick_accel = self.MAX_ANGULAR_JOYSTICK_ACCEL
@@ -76,29 +80,13 @@ class Drivebase(Subsystem):
         self.rot_stick_limiter = SlewRateLimiter(self.tuned_max_angular_joystick_accel)
 
         # Dashboard
-
-        SmartDashboard.putNumber(
-            self.CONFIG_PATH + "Joystick Deadband", self.JOYSTICK_DEADBAND
-        )
-        SmartDashboard.putNumber(
-            self.CONFIG_PATH + "Max Velocity", self.MAX_VELOCITY_MPS
-        )
-        SmartDashboard.putNumber(
-            self.CONFIG_PATH + "Max Angular Velocity", self.MAX_ANGULAR_VELOCITY_TPS
-        )
-        SmartDashboard.putNumber(
-            self.CONFIG_PATH + "Max Joystick Accel", self.MAX_JOYSTICK_ACCEL
-        )
-        SmartDashboard.putNumber(
-            self.CONFIG_PATH + "Max Joystick Angular Accel",
-            self.MAX_ANGULAR_JOYSTICK_ACCEL,
-        )
-        SmartDashboard.putNumber(
-            self.CONFIG_PATH + "Translation Scaling", self.TRANSLATION_SCALING
-        )
-        SmartDashboard.putNumber(
-            self.CONFIG_PATH + "Rotation Scaling", self.ROTATION_SCALING
-        )
+        SmartDashboard.putNumber(self.CONFIG_PATH + "Joystick Deadband", self.JOYSTICK_DEADBAND)
+        SmartDashboard.putNumber(self.CONFIG_PATH + "Max Velocity", self.MAX_VELOCITY_MPS)
+        SmartDashboard.putNumber(self.CONFIG_PATH + "Max Angular Velocity", self.MAX_ANGULAR_VELOCITY_TPS)
+        SmartDashboard.putNumber(self.CONFIG_PATH + "Max Joystick Accel", self.MAX_JOYSTICK_ACCEL)
+        SmartDashboard.putNumber(self.CONFIG_PATH + "Max Joystick Angular Accel", self.MAX_ANGULAR_JOYSTICK_ACCEL)
+        SmartDashboard.putNumber(self.CONFIG_PATH + "Translation Scaling", self.TRANSLATION_SCALING)
+        SmartDashboard.putNumber(self.CONFIG_PATH + "Rotation Scaling", self.ROTATION_SCALING)
 
     def periodic(self) -> None:
         self.front_left_module.send_to_dashboard()
@@ -121,7 +109,6 @@ class Drivebase(Subsystem):
         )  # 0.02 seconds per loop
         self.gyro.sim_state.add_yaw(change_in_rot_deg)
 
-
     def set_gyro_rotation(
         self, rotation: Rotation2d, flip_on_red_alliance: bool
     ) -> None:
@@ -132,29 +119,29 @@ class Drivebase(Subsystem):
             rotation = rotation.rotateBy(Rotation2d.fromRotations(0.5))
         self.gyro.set_yaw(rotation.degrees())
 
+    def calc_drive_to_pose_speeds(self, current_pose: Pose2d, target_pose: Pose2d) -> ChassisSpeeds:
+        # Calculate the desired speeds from the difference
+        delta = current_pose - target_pose
+        forward_speed_mps = self.translation_pid.calculate(delta.x)
+        sideways_speed_mps = self.translation_pid.calculate(delta.y)
+        rotation_speed_rps = self.rotation_pid.calculate(delta.rotation().radians())
+
+        # Create and return the ChassisSpeeds object
+        return ChassisSpeeds(
+            forward_speed_mps,
+            sideways_speed_mps,
+            rotation_speed_rps,
+        )
+
+
     def calc_joystick_speeds(self, controller: CommandXboxController):
-        deadband = SmartDashboard.getNumber(
-            self.CONFIG_PATH + "Joystick Deadband", self.JOYSTICK_DEADBAND
-        )
-        max_vel_mps = SmartDashboard.getNumber(
-            self.CONFIG_PATH + "Max Velocity", self.MAX_VELOCITY_MPS
-        )
-        max_ang_vel_tps = SmartDashboard.getNumber(
-            self.CONFIG_PATH + "Max Angular Velocity", self.MAX_ANGULAR_VELOCITY_TPS
-        )
-        max_joystick_accel = SmartDashboard.getNumber(
-            self.CONFIG_PATH + "Max Joystick Accel", self.MAX_JOYSTICK_ACCEL
-        )
-        max_ang_joystick_accel = SmartDashboard.getNumber(
-            self.CONFIG_PATH + "Max Joystick Angular Accel",
-            self.MAX_ANGULAR_JOYSTICK_ACCEL,
-        )
-        translation_scaling: float = SmartDashboard.getNumber(
-            self.CONFIG_PATH + "Translation Scaling", self.TRANSLATION_SCALING
-        )
-        rotaiton_scaling: float = SmartDashboard.getNumber(
-            self.CONFIG_PATH + "Rotation Scaling", self.ROTATION_SCALING
-        )
+        deadband = SmartDashboard.getNumber(self.CONFIG_PATH + "Joystick Deadband", self.JOYSTICK_DEADBAND)
+        max_vel_mps = SmartDashboard.getNumber(self.CONFIG_PATH + "Max Velocity", self.MAX_VELOCITY_MPS)
+        max_ang_vel_tps = SmartDashboard.getNumber(self.CONFIG_PATH + "Max Angular Velocity", self.MAX_ANGULAR_VELOCITY_TPS)
+        max_joystick_accel = SmartDashboard.getNumber(self.CONFIG_PATH + "Max Joystick Accel", self.MAX_JOYSTICK_ACCEL)
+        max_ang_joystick_accel = SmartDashboard.getNumber(self.CONFIG_PATH + "Max Joystick Angular Accel", self.MAX_ANGULAR_JOYSTICK_ACCEL)
+        translation_scaling: float = SmartDashboard.getNumber(self.CONFIG_PATH + "Translation Scaling", self.TRANSLATION_SCALING)
+        rotaiton_scaling: float = SmartDashboard.getNumber(self.CONFIG_PATH + "Rotation Scaling", self.ROTATION_SCALING)
 
         # Recreate slew rate limiters if limits have changed
         if max_joystick_accel != self.tuned_max_joystick_accel:
@@ -171,28 +158,19 @@ class Drivebase(Subsystem):
         raw_rotation = applyDeadband(-controller.getRightX(), deadband)
 
         # Convert cartesian (x, y) translation stick coordinates to polar (R, theta) and scale R-value
-        raw_translation_R = min(
-            1.0, math.sqrt(pow(raw_translation_x, 2) + pow(raw_translation_y, 2))
-        )
+        raw_translation_R = min(1.0, math.sqrt(pow(raw_translation_x, 2) + pow(raw_translation_y, 2)))
         translation_theta = math.atan2(raw_translation_y, raw_translation_x)
         scaled_translation_R = pow(raw_translation_R, translation_scaling)
 
         # Convert polar coordinates (with scaled R-value) back to cartesian; scale rotation as well
         scaled_translation_Y = scaled_translation_R * math.sin(translation_theta)
         scaled_translation_X = scaled_translation_R * math.cos(translation_theta)
-
         scaled_rotation = pow(raw_rotation, rotaiton_scaling)
 
         # Apply joystick rate limits and calculate speed
-        forward_speed_mps = (
-            self.y_stick_limiter.calculate(scaled_translation_Y) * max_vel_mps
-        )
-        sideways_speed_mps = (
-            self.x_stick_limiter.calculate(scaled_translation_X) * max_vel_mps
-        )
-        rotation_speed_tps = (
-            self.rot_stick_limiter.calculate(scaled_rotation) * max_ang_vel_tps
-        )
+        forward_speed_mps = self.y_stick_limiter.calculate(scaled_translation_Y) * max_vel_mps
+        sideways_speed_mps = self.x_stick_limiter.calculate(scaled_translation_X) * max_vel_mps
+        rotation_speed_tps = self.rot_stick_limiter.calculate(scaled_rotation) * max_ang_vel_tps
 
         # Dashboard things
         path = "drivebase/Joystick Scaling/"
