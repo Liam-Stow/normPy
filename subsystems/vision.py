@@ -1,5 +1,6 @@
 from math import pi
 from statistics import mean
+from commands2 import Subsystem
 from photonlibpy import EstimatedRobotPose
 from photonlibpy.photonCamera import PhotonCamera
 from photonlibpy.photonPoseEstimator import PhotonPoseEstimator, PoseStrategy
@@ -10,12 +11,12 @@ from robotpy_apriltag import AprilTagFieldLayout, AprilTagField
 from util.linear_interpolation_map import LinearInterpolationMap
 
 
-class Vision:
+class Vision(Subsystem):
     def __init__(self):
         self.tag_layout = AprilTagFieldLayout.loadField(AprilTagField.k2025ReefscapeWelded)
         self.camera_name = "photonvision"
         self.camera = PhotonCamera(self.camera_name)
-        self.bot_to_cam = Transform3d(-0.27, 0.27, 0.22, Rotation3d(0, 0.09, pi/4))
+        self.bot_to_cam = Transform3d(0, 0, 0, Rotation3d(0, 0, 0))
         self.pose_estimator = PhotonPoseEstimator(self.tag_layout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, self.camera, self.bot_to_cam)
         self.pose_estimator.multiTagFallbackStrategy = PoseStrategy.LOWEST_AMBIGUITY
         self.latest_pose_estimate = None
@@ -63,8 +64,9 @@ class Vision:
             return False
         
         tag_count = len(pose_estimate.targetsUsed)
-        average_distance_m = mean([target.bestCameraToTarget.translation().norm() for target in pose_estimate.targetsUsed])
         if tag_count == 1:
-            return average_distance_m < 0.7
+            distance_meters = pose_estimate.targetsUsed[0].bestCameraToTarget.translation().norm()
+            return distance_meters < 0.7 
         else: #if tag_count > 1
-            return average_distance_m < 2
+            min_distance_meters = min([target.bestCameraToTarget.translation().norm() for target in pose_estimate.targetsUsed])
+            return min_distance_meters < 3.5
