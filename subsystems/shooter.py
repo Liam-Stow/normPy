@@ -8,7 +8,6 @@ from wpimath.units import radiansPerSecondToRotationsPerMinute
 
 import constants
 
-
 class Shooter(commands2.Subsystem):
     # Actuators
     left_motor = rev.SparkMax(
@@ -16,12 +15,6 @@ class Shooter(commands2.Subsystem):
     )
     right_motor = rev.SparkMax(
         constants.can.shooterRightMotor, rev.SparkLowLevel.MotorType.kBrushless
-    )
-    angle_solenoid = wpilib.DoubleSolenoid(
-        constants.can.pnuematicsHub,
-        wpilib.PneumaticsModuleType.REVPH,
-        constants.pnuematics.shooterUp,
-        constants.pnuematics.shooterDown,
     )
 
     # Sensors
@@ -60,11 +53,19 @@ class Shooter(commands2.Subsystem):
             rev.SparkBase.PersistMode.kPersistParameters,
         )
 
+        right_config = rev.SparkMaxConfig()
+        right_config.follow(constants.can.shooterLeftMotor)
+        self.right_motor.configure(
+            right_config,
+            rev.SparkBase.ResetMode.kResetSafeParameters,
+            rev.SparkBase.PersistMode.kPersistParameters,
+        )
+
     def periodic(self) -> None:
-        if self.angle_solenoid.get() == wpilib.DoubleSolenoid.Value.kForward:
-            wpilib.SmartDashboard.putString("shooter/angle", "low")
-        else:
-            wpilib.SmartDashboard.putString("shooter/angle", "high")
+        wpilib.SmartDashboard.putNumber(
+            "shooter/left motor RPM",
+            self.left_encoder.getVelocity(),
+        )
 
     def simulationPeriodic(self):
         self.physics_sim.setInputVoltage(self.left_motor_sim.getAppliedOutput() * 12.0)
@@ -72,6 +73,7 @@ class Shooter(commands2.Subsystem):
         radsPerSec = self.physics_sim.getAngularVelocity()
         rpm = radiansPerSecondToRotationsPerMinute(radsPerSec)
         self.left_motor_sim.iterate(rpm, 12, 0.02)
+        self.right_motor_sim.iterate(rpm, 12, 0.02)
 
     def __set_speed(self, targetRPM: units.revolutions_per_minute) -> None:
         """Sets the speed of the shooter motors"""
@@ -89,18 +91,8 @@ class Shooter(commands2.Subsystem):
             .andThen(commands2.cmd.idle())
         )
 
-    def aim_low(self) -> commands2.Command:
-        return super().runOnce(
-            lambda: self.angle_solenoid.set(wpilib.DoubleSolenoid.Value.kForward)
-        )
-
-    def aim_high(self) -> commands2.Command:
-        return super().runOnce(
-            lambda: self.angle_solenoid.set(wpilib.DoubleSolenoid.Value.kReverse)
-        )
-
     def at_target_speed(self) -> commands2.button.Trigger:
         return commands2.button.Trigger(
-            lambda: self.left_encoder.getVelocity() == self.target_RPM
-            and self.right_encoder.getVelocity() == self.target_RPM
+            lambda: abs(self.left_encoder.getVelocity() - self.target_RPM) < 50
+            and abs(self.right_encoder.getVelocity() - self.target_RPM) < 50
         )

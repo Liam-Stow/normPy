@@ -69,7 +69,8 @@ class Drivebase(Subsystem):
         )
 
         # PID for teleop drive (not pathplanner)
-        self.translation_pid = PIDController(4, 0, 0.15)
+        self.x_translation_pid = PIDController(4, 0, 0.15)
+        self.y_translation_pid = PIDController(4, 0, 0.15)
         self.rotation_pid = PIDController(4, 0, 0.15)
 
         # Driving filters config
@@ -121,10 +122,12 @@ class Drivebase(Subsystem):
 
     def calc_drive_to_pose_speeds(self, current_pose: Pose2d, target_pose: Pose2d) -> ChassisSpeeds:
         # Calculate the desired speeds from the difference
-        delta = current_pose - target_pose
-        forward_speed_mps = self.translation_pid.calculate(delta.x)
-        sideways_speed_mps = self.translation_pid.calculate(delta.y)
-        rotation_speed_rps = self.rotation_pid.calculate(delta.rotation().radians())
+        delta_x_m = current_pose.translation().x - target_pose.translation().x
+        delta_y_m = current_pose.translation().y - target_pose.translation().y
+        delta_rotation_rad = current_pose.rotation().radians() - target_pose.rotation().radians()
+        forward_speed_mps = self.x_translation_pid.calculate(delta_x_m)
+        sideways_speed_mps = self.y_translation_pid.calculate(delta_y_m)
+        rotation_speed_rps = self.rotation_pid.calculate(delta_rotation_rad)
 
         # Create and return the ChassisSpeeds object
         return ChassisSpeeds(
@@ -132,7 +135,6 @@ class Drivebase(Subsystem):
             sideways_speed_mps,
             rotation_speed_rps,
         )
-
 
     def calc_joystick_speeds(self, controller: CommandXboxController):
         deadband = SmartDashboard.getNumber(self.CONFIG_PATH + "Joystick Deadband", self.JOYSTICK_DEADBAND)

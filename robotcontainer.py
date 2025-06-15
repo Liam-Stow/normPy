@@ -1,5 +1,5 @@
 import commands2
-from subsystems.subsystems import drivebase, shooter, pose_estimator
+from subsystems.subsystems import drivebase, shooter, pose_estimator, feeder
 from wpilib import SmartDashboard, DriverStation
 from wpilib.interfaces import GenericHID
 from pathplannerlib.auto import AutoBuilder # type: ignore
@@ -49,12 +49,10 @@ class RobotContainer:
 
     def configure_button_bindings(self):
         self.driver_controller.a().whileTrue(game_piece_commands.intake_sequence())
+        # self.driver_controller.a().whileTrue(drivebase.drive(lambda: drivebase.calc_drive_to_pose_speeds(pose_estimator.get_pose(), Pose2d(0, 0, 0)), True))
 
-        self.driver_controller.b().whileTrue(drivebase.drive(lambda: drivebase.calc_drive_to_pose_speeds(pose_estimator.get_pose(), Pose2d(1, 1, 0)),True))
-        self.driver_controller.x().onTrue(shooter.spin_up(2000))
-        self.driver_controller.y().onTrue(shooter.spin_up(0))
-        self.driver_controller.back().onTrue(shooter.aim_high())
-        self.driver_controller.start().onTrue(shooter.aim_low())
+        self.driver_controller.b().and_(game_piece_commands.is_ready_to_score().negate()).whileTrue(game_piece_commands.prepare_score())
+        self.driver_controller.b().and_(game_piece_commands.is_ready_to_score()).whileTrue(feeder.feed_to_shooter())
 
     def configure_driver_feedback(self):
         shooter.at_target_speed().onTrue(self.rumble(seconds=0.5))

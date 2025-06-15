@@ -12,7 +12,7 @@
       "userScale": "2",
       "width": "1920",
       "xpos": "0",
-      "ypos": "29"
+      "ypos": "23"
     }
   },
   "Window": {
@@ -53,12 +53,12 @@
     },
     "###NetworkTables": {
       "Collapsed": "0",
-      "Pos": "719,233",
+      "Pos": "811,196",
       "Size": "1090,763"
     },
     "###NetworkTables Info": {
       "Collapsed": "0",
-      "Pos": "659,604",
+      "Pos": "659,676",
       "Size": "750,145"
     },
     "###Other Devices": {
@@ -73,7 +73,7 @@
     },
     "###Plot <1>": {
       "Collapsed": "0",
-      "Pos": "60,60",
+      "Pos": "237,93",
       "Size": "700,400"
     },
     "###Plot <2>": {
@@ -89,6 +89,11 @@
     "###Plot <4>": {
       "Collapsed": "0",
       "Pos": "1071,125",
+      "Size": "700,400"
+    },
+    "###Plot <5>": {
+      "Collapsed": "0",
+      "Pos": "1086,187",
       "Size": "700,400"
     },
     "###System Joysticks": {

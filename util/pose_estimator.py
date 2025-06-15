@@ -1,10 +1,12 @@
 from wpimath.estimator import SwerveDrive4PoseEstimator
-from wpimath.geometry import Pose2d
+from wpimath.geometry import Pose2d, Rotation2d
 from wpimath.kinematics import SwerveModulePosition
 from wpilib import Field2d, SmartDashboard
 from subsystems.drivebase import Drivebase
 from subsystems.vision import Vision
+from wpimath.units import meters
 from commands2 import Subsystem
+from commands2.button import Trigger
 
 SwerveModulePositions4 = tuple[SwerveModulePosition, SwerveModulePosition, SwerveModulePosition, SwerveModulePosition]
 
@@ -33,6 +35,7 @@ class PoseEstimator(Subsystem):
         self.usable_vision_display = self.field_display.getObject("usable vision estimate")
         self.discarded_vision_display = self.field_display.getObject("discarded vision estimate")
         self.simulated_robot_display = self.field_display.getObject("simulated robot")
+        # self.target_pose_display = self.field_display.getObject("target pose")
 
     def periodic(self):
         # Add odometry measurement 
@@ -59,10 +62,24 @@ class PoseEstimator(Subsystem):
     
     def get_pose(self) -> Pose2d:
         return self.pose_estimator.getEstimatedPosition() 
+    
+    def is_at_pose(self, pose: Pose2d, translation_tolerance_m: meters = 0.1, rotation_tolerance: Rotation2d = Rotation2d(0.03)) -> bool:
+        current_pose = self.get_pose()
+        # self.target_pose_display.setPose(pose)
+        return (
+            (current_pose - pose).translation().norm() < translation_tolerance_m 
+            and abs(current_pose.rotation().radians() - pose.rotation().radians()) < rotation_tolerance.radians()
+        )
+
+    def is_at_pose_trigger(self, pose: Pose2d, translation_tolerance_m: meters = 0.1, rotation_tolerance: Rotation2d = Rotation2d(0.03)) -> Trigger:
+        return Trigger(lambda: self.is_at_pose(pose, translation_tolerance_m, rotation_tolerance))
 
     def set_pose(self, pose: Pose2d):
         self.pose_estimator.resetPosition(self.drivebase.get_gyro_rotation(flip_on_red_alliance=False), self.drivebase.get_module_positions(), pose)
         self.estimate_display.setPose(self.get_pose())
+
+    def display_pose(self, name: str, pose: Pose2d):
+        self.field_display.getObject(name).setPose(pose)
     
     def simulationPeriodic(self):
         self.sim_pose_tracker.update(self.drivebase.get_gyro_rotation(flip_on_red_alliance=False), self.drivebase.get_module_positions())

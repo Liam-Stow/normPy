@@ -28,3 +28,4 @@ class can(IntEnum):
     intakeMotor = 15
     shooterLeftMotor = 16
     shooterRightMotor = 17
+    feederMotor = 18
