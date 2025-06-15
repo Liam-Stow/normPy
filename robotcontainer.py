@@ -1,5 +1,5 @@
 import commands2
-from subsystems.subsystems import drivebase, shooter, intake_deploy, intake_roller, vision, pose_estimator
+from subsystems.subsystems import drivebase, shooter, pose_estimator
 from wpilib import SmartDashboard, DriverStation
 from wpilib.interfaces import GenericHID
 from pathplannerlib.auto import AutoBuilder # type: ignore
@@ -7,6 +7,7 @@ from pathplannerlib.controller import PPHolonomicDriveController # type: ignore
 from pathplannerlib.config import RobotConfig, PIDConstants # type: ignore
 from wpimath.units import seconds
 from wpimath.geometry import Pose2d
+from commands import game_piece_commands
 
 class RobotContainer:
     """

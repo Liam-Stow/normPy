@@ -1,10 +1,5 @@
 from commands2 import Command, cmd
-from subsystems.intake_roller import IntakeRoller
-from subsystems.intake_deploy import IntakeDeploy
-from robotcontainer import RobotContainer
-
-intake_deploy: IntakeDeploy = RobotContainer.intake_deploy
-intake_roller: IntakeRoller = RobotContainer.intake_roller
+from subsystems.subsystems import intake_roller, intake_deploy
 
 
 def intake_sequence() -> Command:
