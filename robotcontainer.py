@@ -6,7 +6,6 @@ from pathplannerlib.auto import AutoBuilder # type: ignore
 from pathplannerlib.controller import PPHolonomicDriveController # type: ignore
 from pathplannerlib.config import RobotConfig, PIDConstants # type: ignore
 from wpimath.units import seconds
-from wpimath.geometry import Pose2d
 from commands import game_piece_commands
 
 class RobotContainer:
@@ -49,8 +48,6 @@ class RobotContainer:
 
     def configure_button_bindings(self):
         self.driver_controller.a().whileTrue(game_piece_commands.intake_sequence())
-        # self.driver_controller.a().whileTrue(drivebase.drive(lambda: drivebase.calc_drive_to_pose_speeds(pose_estimator.get_pose(), Pose2d(0, 0, 0)), True))
-
         self.driver_controller.b().and_(game_piece_commands.is_ready_to_score().negate()).whileTrue(game_piece_commands.prepare_score())
         self.driver_controller.b().and_(game_piece_commands.is_ready_to_score()).whileTrue(feeder.feed_to_shooter())
 
